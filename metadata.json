@@ -1,0 +1,6 @@
+{
+  "name": "API Studio",
+  "description": "Professional desktop-grade API development and testing environment with dark/light glassmorphic UI, multi-tab request builder, mock execution engine, collection hierarchy, and environment management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
