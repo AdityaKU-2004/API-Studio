@@ -1,16 +1,22 @@
 import React from 'react';
 import { UrlBar } from './UrlBar';
 import { RequestTabs } from './RequestTabs';
-import { ParamsEditor } from './ParamsEditor';
-import { HeadersEditor } from './HeadersEditor';
-import { AuthorizationEditor } from './AuthorizationEditor';
-import { BodyEditor } from './BodyEditor';
-import { ScriptsEditor } from './ScriptsEditor';
-import { RequestSettings } from './RequestSettings';
+import { ParamsEditor } from './params/ParamsEditor';
+import { HeadersEditor } from './headers/HeadersEditor';
+import { AuthorizationEditor } from './auth/AuthorizationEditor';
+import { BodyEditor } from './body/BodyEditor';
+import { ScriptsEditor } from './scripts/ScriptsEditor';
+import { RequestSettings } from './settings/RequestSettings';
+import { RequestValidatorBanner } from './validation/RequestValidatorBanner';
 import { useUiStore } from '../../stores/uiStore';
+import { useRequestStore } from '../../stores/requestStore';
 
 export const RequestBuilder: React.FC = () => {
   const { activeRequestTab } = useUiStore();
+  const { tabs, activeTabId } = useRequestStore();
+
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const request = activeTab?.request;
 
   return (
     <div className="flex flex-col h-full bg-[#11151e]/80 dark:bg-[#11151e]/80 light:bg-white/80 overflow-hidden select-none">
@@ -18,6 +24,9 @@ export const RequestBuilder: React.FC = () => {
       <div className="p-3 border-b border-blue-500/15 dark:border-blue-500/15 light:border-blue-200/60 shrink-0">
         <UrlBar />
       </div>
+
+      {/* Validation Notice Banner (if any issues found) */}
+      {request && <RequestValidatorBanner request={request} />}
 
       {/* Request Subtabs Bar */}
       <RequestTabs />

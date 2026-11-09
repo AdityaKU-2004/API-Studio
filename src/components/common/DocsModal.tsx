@@ -7,11 +7,12 @@ export const DocsModal: React.FC = () => {
   const { isDocsOpen, setDocsOpen } = useAppStore();
 
   const shortcuts = [
-    { key: 'Ctrl + Enter', desc: 'Send current active request' },
+    { key: 'Ctrl + Enter / ⌘Enter', desc: 'Simulate / Send active request' },
     { key: 'Ctrl + K / ⌘K', desc: 'Open global search command palette' },
-    { key: 'Ctrl + S', desc: 'Save request changes to collection' },
-    { key: 'Ctrl + T', desc: 'Open a new request tab' },
-    { key: 'Ctrl + W', desc: 'Close active request tab' },
+    { key: 'Ctrl + S / ⌘S', desc: 'Save request changes' },
+    { key: 'Ctrl + Shift + N / ⌘⇧N', desc: 'Open new request tab' },
+    { key: 'Ctrl + T / ⌘T', desc: 'Open new request tab' },
+    { key: 'Ctrl + W / ⌘W', desc: 'Close active request tab' },
   ];
 
   return (
@@ -59,10 +60,10 @@ export const DocsModal: React.FC = () => {
         <div>
           <h4 className="text-sm font-semibold text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-emerald-400" />
-            Phase 1 & Architecture Overview
+            Phase 2 Request Builder Architecture
           </h4>
           <p className="text-slate-400 leading-relaxed">
-            API Studio is architected with a decoupled frontend interface layer (Zustand stores, Monaco Editor, reactive tab management, and mock simulation engine) ready for direct binding to Tauri 2 and high-performance native Rust HTTP/QUIC workers in subsequent phases.
+            API Studio Phase 2 provides full bidirectional query parameter synchronization, multi-format bodies (JSON, Text, XML, HTML, Form-data, Binary), cURL import/export, request JSON import/export, auth inheritance, and pre/post request scripting. All configuration is decoupled and ready for native Phase 3 HTTP execution.
           </p>
         </div>
       </div>

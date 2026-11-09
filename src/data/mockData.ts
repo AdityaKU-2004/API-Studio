@@ -6,6 +6,21 @@ export const initialWorkspaces: Workspace[] = [
   { id: 'ws-sandbox', name: 'Sandbox Experiments', description: 'Testing experimental schemas' },
 ];
 
+const defaultMockSettings = {
+  timeout: 5000,
+  followRedirects: true,
+  maxRedirects: 5,
+  autoEncodeUrl: true,
+  sslVerification: true,
+  allowInsecureCertificates: false,
+  httpVersion: 'auto' as const,
+  connectionTimeout: 5000,
+  keepAlive: true,
+  disableCache: false,
+  followAuthRedirects: true,
+  customUserAgent: 'API Studio/2.0',
+};
+
 export const sampleRequests: Record<string, ApiRequest> = {
   'req-user-get-all': {
     id: 'req-user-get-all',
@@ -28,7 +43,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '// Set request timestamp\npm.variables.set("request_time", Date.now());',
     testScript: 'pm.test("Status code is 200", function () {\n  pm.response.to.have.status(200);\n});\n\npm.test("Response time is less than 500ms", function () {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\npm.test("Users array is populated", function () {\n  const jsonData = pm.response.json();\n  pm.expect(jsonData.users).to.be.an("array");\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'none', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '// Set request timestamp\npm.variables.set("request_time", Date.now());', enabled: true },
+      postResponse: { script: 'pm.test("Status code is 200", function () {\n  pm.response.to.have.status(200);\n});', enabled: true },
+    },
+    settings: { ...defaultMockSettings, timeout: 5000 },
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-user-get-id': {
     id: 'req-user-get-id',
@@ -48,7 +70,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("User ID matches", function () {\n  const data = pm.response.json();\n  pm.expect(data.id).to.eql(104);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'none', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("User ID matches", function () {\n  const data = pm.response.json();\n  pm.expect(data.id).to.eql(104);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-user-create': {
     id: 'req-user-create',
@@ -81,7 +110,20 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '// Generate unique client trace ID\npm.variables.set("trace_id", "trace_" + Math.random().toString(36).substring(7));',
     testScript: 'pm.test("Status code is 201 Created", function () {\n  pm.response.to.have.status(201);\n});\n\npm.test("User object has generated ID", function () {\n  const res = pm.response.json();\n  pm.expect(res).to.have.property("id");\n});',
-    settings: { timeout: 10000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: {
+      mode: 'json',
+      rawContent: {},
+      formData: [],
+      urlEncoded: [],
+      binary: {},
+    },
+    scripts: {
+      preRequest: { script: '// Generate unique client trace ID\npm.variables.set("trace_id", "trace_" + Math.random().toString(36).substring(7));', enabled: true },
+      postResponse: { script: 'pm.test("Status code is 201 Created", function () {\n  pm.response.to.have.status(201);\n});', enabled: true },
+    },
+    settings: { ...defaultMockSettings, timeout: 10000 },
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-user-update': {
     id: 'req-user-update',
@@ -107,7 +149,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("Update successful", function () {\n  pm.response.to.have.status(200);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'json', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("Update successful", function () {\n  pm.response.to.have.status(200);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-user-delete': {
     id: 'req-user-delete',
@@ -125,7 +174,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("Status code is 204 No Content", function () {\n  pm.response.to.have.status(204);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'none', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("Status code is 204 No Content", function () {\n  pm.response.to.have.status(204);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-prod-get-all': {
     id: 'req-prod-get-all',
@@ -146,7 +202,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("Status code is 200", function () {\n  pm.response.to.have.status(200);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'none', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("Status code is 200", function () {\n  pm.response.to.have.status(200);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-prod-get-id': {
     id: 'req-prod-get-id',
@@ -164,7 +227,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("Product SKU found", function () {\n  const p = pm.response.json();\n  pm.expect(p.sku).to.be.a("string");\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'none', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("Product SKU found", function () {\n  const p = pm.response.json();\n  pm.expect(p.sku).to.be.a("string");\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-prod-create': {
     id: 'req-prod-create',
@@ -175,7 +245,7 @@ export const sampleRequests: Record<string, ApiRequest> = {
     headers: [
       { id: 'h1', key: 'Content-Type', value: 'application/json', description: '', enabled: true },
     ],
-    auth: { type: 'apikey', apikey: { key: 'X-API-Key', value: '{{api_key}}', addTo: 'header' } },
+    auth: { type: 'apikey', apikey: { key: 'X-API-Key', value: '{{api_key}}', addTo: 'header', enabled: true } },
     bodyType: 'json',
     rawBody: JSON.stringify(
       {
@@ -197,7 +267,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("Status code is 201", function () {\n  pm.response.to.have.status(201);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'json', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("Status code is 201", function () {\n  pm.response.to.have.status(201);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-auth-login': {
     id: 'req-auth-login',
@@ -224,7 +301,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '// Clear previous session tokens\npm.environment.unset("auth_token");',
     testScript: 'pm.test("Status code is 200", function () {\n  pm.response.to.have.status(200);\n});\n\npm.test("Store access token in environment", function () {\n  const res = pm.response.json();\n  pm.environment.set("auth_token", res.accessToken);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'json', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '// Clear previous session tokens\npm.environment.unset("auth_token");', enabled: true },
+      postResponse: { script: 'pm.test("Status code is 200", function () {\n  pm.response.to.have.status(200);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-auth-register': {
     id: 'req-auth-register',
@@ -251,7 +335,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("Registration initiated", function () {\n  pm.response.to.have.status(201);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'json', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("Registration initiated", function () {\n  pm.response.to.have.status(201);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
   'req-auth-refresh': {
     id: 'req-auth-refresh',
@@ -275,7 +366,14 @@ export const sampleRequests: Record<string, ApiRequest> = {
     urlEncoded: [],
     preRequestScript: '',
     testScript: 'pm.test("New tokens received", function () {\n  pm.response.to.have.status(200);\n});',
-    settings: { timeout: 5000, followRedirects: true, sslVerification: true, autoEncodeUrl: true },
+    body: { mode: 'json', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: true },
+      postResponse: { script: 'pm.test("New tokens received", function () {\n  pm.response.to.have.status(200);\n});', enabled: true },
+    },
+    settings: defaultMockSettings,
+    createdAt: 1740000000000,
+    updatedAt: 1740000000000,
   },
 };
 

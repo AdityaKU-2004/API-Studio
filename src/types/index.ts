@@ -1,86 +1,6 @@
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
-
-export interface KeyValueItem {
-  id: string;
-  key: string;
-  value: string;
-  description?: string;
-  enabled: boolean;
-}
-
-export type AuthType = 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
-
-export interface AuthConfig {
-  type: AuthType;
-  bearer?: {
-    token: string;
-    prefix?: string;
-  };
-  basic?: {
-    username: string;
-    password: string;
-  };
-  apikey?: {
-    key: string;
-    value: string;
-    addTo: 'header' | 'query';
-  };
-  oauth2?: {
-    grantType: 'authorization_code' | 'client_credentials' | 'implicit';
-    authUrl: string;
-    accessTokenUrl: string;
-    clientId: string;
-    clientSecret: string;
-    scope: string;
-    token?: string;
-  };
-}
-
-export type BodyType = 'none' | 'json' | 'text' | 'xml' | 'form-data' | 'x-www-form-urlencoded';
-
-export interface FormDataItem {
-  id: string;
-  key: string;
-  value: string;
-  type: 'text' | 'file';
-  description?: string;
-  enabled: boolean;
-}
-
-export interface RequestSettings {
-  timeout: number;
-  followRedirects: boolean;
-  sslVerification: boolean;
-  autoEncodeUrl: boolean;
-}
-
-export interface ApiRequest {
-  id: string;
-  name: string;
-  method: HttpMethod;
-  url: string;
-  params: KeyValueItem[];
-  headers: KeyValueItem[];
-  auth: AuthConfig;
-  bodyType: BodyType;
-  rawBody: string;
-  formData: FormDataItem[];
-  urlEncoded: KeyValueItem[];
-  preRequestScript: string;
-  testScript: string;
-  settings: RequestSettings;
-  collectionId?: string;
-  folderId?: string;
-}
-
-export interface RequestTab {
-  id: string;
-  requestId?: string;
-  title: string;
-  method: HttpMethod;
-  isDirty?: boolean;
-  request: ApiRequest;
-}
+export * from './auth';
+export * from './body';
+export * from './request';
 
 export interface ResponseCookie {
   name: string;
@@ -117,7 +37,8 @@ export interface CollectionItem {
   type: 'collection' | 'folder' | 'request';
   parentId?: string | null;
   requestId?: string;
-  request?: ApiRequest;
+  request?: import('./request').ApiRequest;
+  auth?: import('./auth').AuthConfig;
   children?: CollectionItem[];
   isExpanded?: boolean;
   description?: string;
@@ -141,13 +62,13 @@ export interface Environment {
 
 export interface HistoryItem {
   id: string;
-  method: HttpMethod;
+  method: import('./request').HttpMethod;
   url: string;
   status: number;
   statusText: string;
   timeMs: number;
   timestamp: number;
-  request: ApiRequest;
+  request: import('./request').ApiRequest;
 }
 
 export interface Workspace {

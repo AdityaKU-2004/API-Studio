@@ -31,8 +31,9 @@ export const AppLayout: React.FC = () => {
         e.preventDefault();
         saveActiveRequest();
       }
-      // Ctrl+T or Cmd+T: New tab (when not inside standard input)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+      // Ctrl+Shift+N or Cmd+Shift+N or Ctrl+T: New tab
+      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'n') ||
+          ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement))) {
         e.preventDefault();
         addTab();
       }
