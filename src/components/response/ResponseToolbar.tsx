@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Copy, Download, Trash2, Check, Clock, HardDrive } from 'lucide-react';
+import { Copy, Download, Trash2, Check, Clock, HardDrive, Calendar } from 'lucide-react';
 import { ApiResponse } from '../../types';
 import { useUiStore } from '../../stores/uiStore';
 import { useRequestStore } from '../../stores/requestStore';
+import { ResponseStatus } from './ResponseStatus';
+import { formatBytes } from '../../utils/formatBytes';
+import { formatDuration } from '../../utils/formatDuration';
 
 interface ResponseToolbarProps {
   response: ApiResponse;
@@ -14,39 +17,52 @@ export const ResponseToolbar: React.FC<ResponseToolbarProps> = ({ response }) =>
 
   const [copied, setCopied] = useState(false);
 
-  const getStatusColor = (status: number) => {
-    if (status >= 200 && status < 300) return 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
-    if (status >= 300 && status < 400) return 'text-cyan-400 bg-cyan-500/15 border-cyan-500/30';
-    if (status >= 400 && status < 500) return 'text-amber-400 bg-amber-500/15 border-amber-500/30';
-    return 'text-red-400 bg-red-500/15 border-red-500/30';
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    return `${(bytes / 1024).toFixed(2)} KB`;
-  };
-
   const handleCopyBody = () => {
-    navigator.clipboard.writeText(response.body);
+    navigator.clipboard.writeText(response.rawBody || response.body);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
-    const blob = new Blob([response.body], { type: 'application/json' });
+    let blob: Blob;
+    let filename = `response_${response.status}_${Date.now()}`;
+
+    if (response.binaryDataUrl) {
+      const a = document.createElement('a');
+      a.href = response.binaryDataUrl;
+      a.download = filename;
+      a.click();
+      return;
+    }
+
+    if (response.contentTypeCategory === 'json') {
+      blob = new Blob([response.body], { type: 'application/json' });
+      filename += '.json';
+    } else if (response.contentTypeCategory === 'html') {
+      blob = new Blob([response.body], { type: 'text/html' });
+      filename += '.html';
+    } else if (response.contentTypeCategory === 'xml') {
+      blob = new Blob([response.body], { type: 'application/xml' });
+      filename += '.xml';
+    } else {
+      blob = new Blob([response.body], { type: 'text/plain' });
+      filename += '.txt';
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `response_${response.status}_${Date.now()}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const tabs: { id: typeof activeResponseTab; label: string; count?: number }[] = [
     { id: 'body', label: 'Body' },
-    { id: 'headers', label: 'Headers', count: Object.keys(response.headers).length },
-    { id: 'cookies', label: 'Cookies', count: response.cookies.length },
-    { id: 'tests', label: 'Tests', count: response.tests.length },
+    { id: 'headers', label: 'Headers', count: Object.keys(response.headers || {}).length },
+    { id: 'cookies', label: 'Cookies', count: response.cookies?.length || 0 },
+    { id: 'tests', label: 'Tests', count: response.tests?.length || 0 },
+    { id: 'timing', label: 'Timing' },
   ];
 
   return (
@@ -54,28 +70,31 @@ export const ResponseToolbar: React.FC<ResponseToolbarProps> = ({ response }) =>
       {/* Top Status Strip */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/60 flex-wrap gap-2">
         {/* Status code + time + size metrics */}
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border font-mono text-xs font-semibold ${getStatusColor(
-              response.status
-            )} shadow-sm`}
-          >
-            <span>Status:</span>
-            <span>{response.status}</span>
-            <span>{response.statusText}</span>
-          </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <ResponseStatus
+            status={response.status}
+            statusText={response.statusText}
+            isError={response.status === 0 || !!response.error}
+          />
 
           <div className="flex items-center gap-1 text-xs text-slate-400 font-mono">
             <Clock className="w-3.5 h-3.5 text-cyan-400" />
             <span>Time: </span>
-            <span className="text-slate-200 font-semibold">{response.timeMs}ms</span>
+            <span className="text-slate-200 font-semibold">{formatDuration(response.timeMs)}</span>
           </div>
 
           <div className="flex items-center gap-1 text-xs text-slate-400 font-mono">
             <HardDrive className="w-3.5 h-3.5 text-blue-400" />
             <span>Size: </span>
-            <span className="text-slate-200 font-semibold">{formatBytes(response.sizeBytes)}</span>
+            <span className="text-slate-200 font-semibold">{formatBytes(response.size || response.sizeBytes || 0)}</span>
           </div>
+
+          {response.receivedAt && (
+            <div className="hidden md:flex items-center gap-1 text-[11px] text-slate-500 font-mono">
+              <Calendar className="w-3 h-3 text-slate-500" />
+              <span>{new Date(response.receivedAt).toLocaleTimeString()}</span>
+            </div>
+          )}
         </div>
 
         {/* Action icons */}
@@ -91,7 +110,7 @@ export const ResponseToolbar: React.FC<ResponseToolbarProps> = ({ response }) =>
           <button
             type="button"
             onClick={handleDownload}
-            title="Download Response JSON"
+            title="Download Response"
             className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
@@ -108,7 +127,7 @@ export const ResponseToolbar: React.FC<ResponseToolbarProps> = ({ response }) =>
       </div>
 
       {/* Tabs Strip */}
-      <div className="flex items-center gap-1 px-3">
+      <div className="flex items-center gap-1 px-3 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = activeResponseTab === tab.id;
           return (
@@ -116,7 +135,7 @@ export const ResponseToolbar: React.FC<ResponseToolbarProps> = ({ response }) =>
               key={tab.id}
               type="button"
               onClick={() => setActiveResponseTab(tab.id)}
-              className={`relative py-2 px-3 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+              className={`relative py-2 px-3 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 isActive
                   ? 'text-cyan-400 dark:text-cyan-400 light:text-blue-600 font-semibold'
                   : 'text-slate-400 hover:text-slate-200'

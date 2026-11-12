@@ -1,35 +1,9 @@
 export * from './auth';
 export * from './body';
 export * from './request';
-
-export interface ResponseCookie {
-  name: string;
-  value: string;
-  domain?: string;
-  path?: string;
-  expires?: string;
-  httpOnly?: boolean;
-  secure?: boolean;
-}
-
-export interface TestResult {
-  name: string;
-  passed: boolean;
-  message?: string;
-}
-
-export interface ApiResponse {
-  status: number;
-  statusText: string;
-  timeMs: number;
-  sizeBytes: number;
-  timestamp: number;
-  headers: Record<string, string>;
-  cookies: ResponseCookie[];
-  body: string;
-  contentType: string;
-  tests: TestResult[];
-}
+export * from './http';
+export * from './response';
+export * from './execution';
 
 export interface CollectionItem {
   id: string;

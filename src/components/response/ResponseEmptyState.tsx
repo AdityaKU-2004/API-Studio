@@ -27,7 +27,7 @@ export const ResponseEmptyState: React.FC = () => {
 
       <button
         type="button"
-        onClick={sendRequest}
+        onClick={() => sendRequest()}
         disabled={isSending}
         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-semibold hover:brightness-110 active:brightness-95 transition-all shadow-[0_0_16px_rgba(6,182,212,0.3)] cursor-pointer"
       >

@@ -13,7 +13,7 @@ export interface FormDataItem {
   key: string;
   value: string;
   type: 'text' | 'file';
-  file?: {
+  file?: File | {
     name: string;
     size: number;
     type: string;
@@ -23,12 +23,13 @@ export interface FormDataItem {
 }
 
 export interface BinaryBody {
-  file?: {
+  file?: File | {
     name: string;
     size: number;
     type: string;
   };
   fileName?: string;
+  filename?: string;
   fileSize?: number;
   fileType?: string;
 }

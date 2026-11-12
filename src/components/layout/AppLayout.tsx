@@ -11,6 +11,7 @@ import { NewCollectionModal } from '../collections/NewCollectionModal';
 import { NewFolderModal } from '../collections/NewFolderModal';
 import { NewRequestModal } from '../collections/NewRequestModal';
 import { EnvironmentModal } from '../environments/EnvironmentModal';
+import { ExecutionConsole } from '../console/ExecutionConsole';
 import { useRequestStore } from '../../stores/requestStore';
 import { useUiStore } from '../../stores/uiStore';
 
@@ -83,6 +84,7 @@ export const AppLayout: React.FC = () => {
       <NewFolderModal />
       <NewRequestModal />
       <EnvironmentModal />
+      <ExecutionConsole />
     </div>
   );
 };

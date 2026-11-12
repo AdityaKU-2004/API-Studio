@@ -3,13 +3,14 @@ export type AuthType = 'inherit' | 'none' | 'bearer' | 'basic' | 'apikey' | 'oau
 export interface ApiKeyAuth {
   key: string;
   value: string;
-  addTo: 'header' | 'query';
+  addTo?: 'header' | 'query';
+  in?: 'header' | 'query';
   enabled: boolean;
 }
 
 export interface BearerAuth {
   token: string;
-  prefix: string;
+  prefix?: string;
   visible?: boolean;
 }
 
@@ -38,11 +39,13 @@ export interface OAuth2Auth {
   username?: string; // for legacy password grant
   password?: string; // for legacy password grant
   token?: string;
+  accessToken?: string;
 }
 
 export interface AuthConfig {
   type: AuthType;
   apikey?: ApiKeyAuth;
+  apiKey?: ApiKeyAuth; // alias
   bearer?: BearerAuth;
   basic?: BasicAuth;
   oauth2?: OAuth2Auth;

@@ -14,6 +14,7 @@ import {
   BookmarkPlus,
 } from 'lucide-react';
 import { MethodSelector } from './MethodSelector';
+import { SendButton } from './SendButton';
 import { useRequestStore } from '../../stores/requestStore';
 import { useEnvironmentStore } from '../../stores/environmentStore';
 import { HttpMethod } from '../../types';
@@ -144,25 +145,7 @@ export const UrlBar: React.FC = () => {
         </div>
 
         {/* Send Button */}
-        <button
-          type="button"
-          onClick={sendRequest}
-          disabled={isSending}
-          title="Simulate / Send Request (Ctrl+Enter)"
-          className="h-9 px-4 rounded-lg bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-[0_0_16px_rgba(6,182,212,0.35)] hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:brightness-110 active:brightness-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-        >
-          {isSending ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Sending...</span>
-            </>
-          ) : (
-            <>
-              <span>Send</span>
-              <Send className="w-3 h-3" />
-            </>
-          )}
-        </button>
+        <SendButton />
 
         {/* Save Button */}
         <button

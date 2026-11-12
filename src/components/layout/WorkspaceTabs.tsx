@@ -7,8 +7,10 @@ import {
   FolderMinus,
   Edit2,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useRequestStore } from '../../stores/requestStore';
+import { useExecutionStore } from '../../stores/executionStore';
 import { MethodBadge } from '../common/MethodBadge';
 import { Modal } from '../common/Modal';
 
@@ -96,6 +98,8 @@ export const WorkspaceTabs: React.FC = () => {
         {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           const isRenaming = isRenamingTabId === tab.id;
+          const tabExec = useExecutionStore.getState().tabExecutions[tab.id];
+          const isTabRunning = tabExec?.status === 'sending' || tabExec?.status === 'receiving';
 
           return (
             <div
@@ -108,7 +112,11 @@ export const WorkspaceTabs: React.FC = () => {
                   : 'bg-transparent text-slate-400 dark:text-slate-400 light:text-slate-600 border-transparent hover:bg-slate-800/40 dark:hover:bg-slate-800/40 light:hover:bg-slate-200/50'
               }`}
             >
-              <MethodBadge method={tab.method} size="sm" />
+              {isTabRunning ? (
+                <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" />
+              ) : (
+                <MethodBadge method={tab.method} size="sm" />
+              )}
 
               {isRenaming ? (
                 <form onSubmit={handleSaveRename} onClick={(e) => e.stopPropagation()}>

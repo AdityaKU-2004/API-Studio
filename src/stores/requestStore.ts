@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { ApiRequest, ApiResponse, HttpMethod, RequestTab } from '../types';
 import { sampleRequests } from '../data/mockData';
-import { requestService } from '../services/mock/mockRequestService';
+import { httpClient } from '../services/http/httpClient';
+import { useExecutionStore } from './executionStore';
 import { useEnvironmentStore } from './environmentStore';
 import { useHistoryStore } from './historyStore';
 import { useCollectionStore } from './collectionStore';
@@ -95,7 +96,8 @@ interface RequestState {
   updateUrlAndSyncParams: (newUrl: string) => void;
   saveActiveRequest: () => void;
   saveRequestAs: (name: string, collectionId: string, folderId?: string) => void;
-  sendRequest: () => Promise<void>;
+  sendRequest: (targetTabId?: string) => Promise<void>;
+  cancelRequest: (targetTabId?: string) => void;
   setResponse: (response: ApiResponse | null) => void;
   setPendingCloseTabId: (tabId: string | null) => void;
 }
@@ -164,6 +166,9 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       set({ pendingCloseTabId: tabId });
       return false; // Not closed yet
     }
+
+    // Cancel active network request for this tab if running
+    httpClient.cancel(tabId);
 
     const remaining = state.tabs.filter((t) => t.id !== tabId);
 
@@ -278,7 +283,13 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   },
 
   setActiveTabId: (tabId) => {
-    set({ activeTabId: tabId, activeResponse: null });
+    const tabResponse = useExecutionStore.getState().getTabResponse(tabId);
+    const isTabExecuting = httpClient.isExecuting(tabId);
+    set({
+      activeTabId: tabId,
+      activeResponse: tabResponse,
+      isSending: isTabExecuting,
+    });
   },
 
   updateActiveRequest: (updates, syncUrl = false) => {
@@ -444,34 +455,108 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }));
   },
 
-  sendRequest: async () => {
+  sendRequest: async (targetTabId) => {
     const state = get();
-    const activeTab = state.tabs.find((t) => t.id === state.activeTabId);
-    if (!activeTab || state.isSending) return;
+    const tabId = targetTabId || state.activeTabId;
+    const targetTab = state.tabs.find((t) => t.id === tabId);
+    if (!targetTab || httpClient.isExecuting(tabId)) return;
 
-    set({ isSending: true });
+    if (tabId === state.activeTabId) {
+      set({ isSending: true });
+    }
+
+    const execStore = useExecutionStore.getState();
+    execStore.startExecution(tabId, targetTab.request.id);
+    execStore.addLog({
+      level: 'info',
+      tabId,
+      requestId: targetTab.request.id,
+      method: targetTab.request.method,
+      url: targetTab.request.url,
+      title: 'Request Started',
+      message: `${targetTab.request.method} ${targetTab.request.url}`,
+    });
 
     try {
       const resolvedVars = useEnvironmentStore.getState().getResolvedVariables();
-      const response = await requestService.executeRequest(activeTab.request, resolvedVars);
-
-      set({ activeResponse: response, isSending: false });
-
-      // Add to history
-      useHistoryStore.getState().addHistoryItem({
-        method: activeTab.request.method,
-        url: activeTab.request.url,
-        status: response.status,
-        statusText: response.statusText,
-        timeMs: response.timeMs,
-        timestamp: response.timestamp,
-        request: JSON.parse(JSON.stringify(activeTab.request)),
+      const response = await httpClient.execute(targetTab.request, {
+        tabId,
+        resolvedVariables: resolvedVars,
+        timeoutMs: targetTab.request.settings?.timeout,
       });
+
+      execStore.finishExecution(tabId, response);
+
+      // Log completion to console
+      if (response.error || response.status === 0) {
+        execStore.addLog({
+          level: response.error?.type === 'abort' ? 'warn' : 'error',
+          tabId,
+          requestId: targetTab.request.id,
+          method: targetTab.request.method,
+          url: targetTab.request.url,
+          title: response.error?.type === 'abort' ? 'Request Cancelled' : 'Request Failed',
+          message: response.error?.message || 'Network error occurred',
+          durationMs: response.timeMs,
+        });
+      } else {
+        execStore.addLog({
+          level: 'success',
+          tabId,
+          requestId: targetTab.request.id,
+          method: targetTab.request.method,
+          url: targetTab.request.url,
+          title: 'Response Received',
+          message: `${response.status} ${response.statusText} (${response.timeMs}ms, ${response.size} bytes)`,
+          durationMs: response.timeMs,
+        });
+      }
+
+      // Add to history unless manually aborted
+      if (response.error?.type !== 'abort') {
+        useHistoryStore.getState().addHistoryItem({
+          method: targetTab.request.method,
+          url: targetTab.request.url,
+          status: response.status,
+          statusText: response.statusText,
+          timeMs: response.timeMs,
+          timestamp: response.timestamp,
+          request: JSON.parse(JSON.stringify(targetTab.request)),
+        });
+      }
+
+      // If this is currently the active tab, update activeResponse and isSending
+      if (get().activeTabId === tabId) {
+        set({ activeResponse: response, isSending: false });
+      }
     } catch {
+      if (get().activeTabId === tabId) {
+        set({ isSending: false });
+      }
+    }
+  },
+
+  cancelRequest: (targetTabId) => {
+    const state = get();
+    const tabId = targetTabId || state.activeTabId;
+    httpClient.cancel(tabId);
+    useExecutionStore.getState().cancelExecution(tabId);
+    useExecutionStore.getState().addLog({
+      level: 'warn',
+      tabId,
+      title: 'Request Cancelled',
+      message: 'User aborted in-flight HTTP request',
+    });
+    if (state.activeTabId === tabId) {
       set({ isSending: false });
     }
   },
 
-  setResponse: (response) => set({ activeResponse: response }),
+  setResponse: (response) => {
+    const activeTabId = get().activeTabId;
+    useExecutionStore.getState().setTabResponse(activeTabId, response);
+    set({ activeResponse: response });
+  },
+
   setPendingCloseTabId: (tabId) => set({ pendingCloseTabId: tabId }),
 }));

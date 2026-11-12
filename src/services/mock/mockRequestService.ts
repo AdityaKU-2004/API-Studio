@@ -69,12 +69,20 @@ export class MockRequestService implements IRequestService {
         { name: 'Valid JSON payload structure returned', passed: !isDelete },
       ];
 
+      const sizeBytes = new Blob([bodyStr]).size + 420;
       return {
+        id: 'mock-exec-' + timestamp,
+        requestId: request.id,
         status: statusCode,
         statusText,
+        ok: statusCode >= 200 && statusCode < 400,
+        url: request.url,
+        method: request.method,
         timeMs: simulatedDelay,
-        sizeBytes: new Blob([bodyStr]).size + 420,
+        size: sizeBytes,
+        sizeBytes,
         timestamp,
+        receivedAt: new Date(timestamp).toISOString(),
         headers: {
           'content-type': 'application/json; charset=utf-8',
           'x-request-id': 'req_' + Math.random().toString(36).substring(2, 12),
@@ -86,22 +94,50 @@ export class MockRequestService implements IRequestService {
           { name: 'studio_session', value: 'sess_' + Math.random().toString(36).substring(2, 10), domain: 'localhost', path: '/' }
         ],
         body: bodyStr,
+        rawBody: bodyStr,
         contentType: 'application/json',
+        contentTypeCategory: 'json',
+        timing: {
+          startTime: timestamp - simulatedDelay,
+          endTime: timestamp,
+          duration: simulatedDelay,
+          prepareMs: 2,
+          waitingMs: simulatedDelay - 4,
+          downloadMs: 2,
+        },
         tests
       };
     }
 
     const bodyStr = matchingMock.body || '{}';
+    const sizeBytes = new Blob([bodyStr]).size + 512;
     return {
+      id: 'mock-exec-' + timestamp,
+      requestId: request.id,
       status: matchingMock.status || 200,
       statusText: matchingMock.statusText || 'OK',
+      ok: (matchingMock.status || 200) < 400,
+      url: request.url,
+      method: request.method,
       timeMs: simulatedDelay,
-      sizeBytes: new Blob([bodyStr]).size + 512,
+      size: sizeBytes,
+      sizeBytes,
       timestamp,
+      receivedAt: new Date(timestamp).toISOString(),
       headers: matchingMock.headers || { 'content-type': 'application/json' },
       cookies: matchingMock.cookies || [],
       body: bodyStr,
+      rawBody: bodyStr,
       contentType: 'application/json',
+      contentTypeCategory: 'json',
+      timing: {
+        startTime: timestamp - simulatedDelay,
+        endTime: timestamp,
+        duration: simulatedDelay,
+        prepareMs: 2,
+        waitingMs: simulatedDelay - 4,
+        downloadMs: 2,
+      },
       tests: matchingMock.tests || [
         { name: 'Status code check', passed: true }
       ]

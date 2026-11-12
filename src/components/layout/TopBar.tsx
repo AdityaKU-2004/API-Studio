@@ -11,11 +11,13 @@ import {
   User,
   Check,
   Plus,
+  Terminal,
 } from 'lucide-react';
 import { TrafficLights } from '../common/TrafficLights';
 import { useAppStore } from '../../stores/appStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useEnvironmentStore } from '../../stores/environmentStore';
+import { useExecutionStore } from '../../stores/executionStore';
 
 export const TopBar: React.FC = () => {
   const {
@@ -198,6 +200,19 @@ export const TopBar: React.FC = () => {
           className="p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 dark:hover:bg-slate-800/60 light:hover:bg-slate-100 transition-colors cursor-pointer"
         >
           {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-600" />}
+        </button>
+
+        {/* Console Toggle Button */}
+        <button
+          type="button"
+          onClick={() => useExecutionStore.getState().toggleConsole()}
+          title="Toggle Execution Console"
+          className="relative p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 dark:hover:bg-slate-800/60 light:hover:bg-slate-100 transition-colors cursor-pointer"
+        >
+          <Terminal className="w-4 h-4 text-cyan-400" />
+          {useExecutionStore.getState().logs.length > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
+          )}
         </button>
 
         {/* Docs Button */}
