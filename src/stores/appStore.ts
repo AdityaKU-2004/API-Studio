@@ -14,8 +14,13 @@ interface AppState {
   isNewRequestModalOpen: boolean;
   isCodeSnippetModalOpen: boolean;
   isEnvironmentModalOpen: boolean;
+  isGlobalVariablesModalOpen: boolean;
+  isImportExportModalOpen: boolean;
+  isBackupRestoreModalOpen: boolean;
+  importExportMode: 'import' | 'export';
   targetCollectionIdForNewItem: string | null;
   targetFolderIdForNewItem: string | null;
+  targetCollectionIdForExport: string | null;
 
   setActiveWorkspaceId: (id: string) => void;
   setActiveView: (view: SidebarSection) => void;
@@ -27,6 +32,9 @@ interface AppState {
   setNewRequestModalOpen: (open: boolean, collectionId?: string, folderId?: string) => void;
   setCodeSnippetModalOpen: (open: boolean) => void;
   setEnvironmentModalOpen: (open: boolean) => void;
+  setGlobalVariablesModalOpen: (open: boolean) => void;
+  setImportExportModalOpen: (open: boolean, mode?: 'import' | 'export', collectionId?: string | null) => void;
+  setBackupRestoreModalOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -41,8 +49,13 @@ export const useAppStore = create<AppState>((set) => ({
   isNewRequestModalOpen: false,
   isCodeSnippetModalOpen: false,
   isEnvironmentModalOpen: false,
+  isGlobalVariablesModalOpen: false,
+  isImportExportModalOpen: false,
+  isBackupRestoreModalOpen: false,
+  importExportMode: 'export',
   targetCollectionIdForNewItem: null,
   targetFolderIdForNewItem: null,
+  targetCollectionIdForExport: null,
 
   setActiveWorkspaceId: (id) => set({ activeWorkspaceId: id }),
   setActiveView: (view) => set({ activeView: view }),
@@ -63,4 +76,12 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   setCodeSnippetModalOpen: (open) => set({ isCodeSnippetModalOpen: open }),
   setEnvironmentModalOpen: (open) => set({ isEnvironmentModalOpen: open }),
+  setGlobalVariablesModalOpen: (open) => set({ isGlobalVariablesModalOpen: open }),
+  setImportExportModalOpen: (open, mode = 'export', collectionId = null) =>
+    set({
+      isImportExportModalOpen: open,
+      importExportMode: mode,
+      targetCollectionIdForExport: collectionId,
+    }),
+  setBackupRestoreModalOpen: (open) => set({ isBackupRestoreModalOpen: open }),
 }));

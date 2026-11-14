@@ -56,6 +56,7 @@ export interface RequestDefinition {
   updatedAt: number;
   collectionId?: string;
   folderId?: string;
+  order?: number;
 }
 
 // Backward compatible alias with Phase 1

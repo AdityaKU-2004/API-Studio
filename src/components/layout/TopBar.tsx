@@ -175,7 +175,7 @@ export const TopBar: React.FC = () => {
                   {env.id === activeEnvironmentId && <Check className="w-3.5 h-3.5 text-cyan-400" />}
                 </button>
               ))}
-              <div className="border-t border-slate-700/50 dark:border-slate-800/80 light:border-slate-200 mt-1 pt-1">
+              <div className="border-t border-slate-700/50 dark:border-slate-800/80 light:border-slate-200 mt-1 pt-1 space-y-0.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -186,6 +186,17 @@ export const TopBar: React.FC = () => {
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Manage Environments</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEnvMenuOpen(false);
+                    useAppStore.getState().setGlobalVariablesModalOpen(true);
+                  }}
+                  className="w-full px-3 py-1.5 text-xs text-left text-slate-300 hover:bg-blue-600/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Global Variables</span>
                 </button>
               </div>
             </div>

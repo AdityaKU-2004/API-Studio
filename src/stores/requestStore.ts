@@ -7,6 +7,7 @@ import { useEnvironmentStore } from './environmentStore';
 import { useHistoryStore } from './historyStore';
 import { useCollectionStore } from './collectionStore';
 import { buildUrlWithParams, parseUrl } from '../services/request/urlBuilder';
+import { storageService } from '../services/storage/storageService';
 
 export const createDefaultRequest = (name = 'New Request', method: HttpMethod = 'GET'): ApiRequest => {
   const now = Date.now();
@@ -478,8 +479,23 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     });
 
     try {
+      // Resolve inheritance if collectionId is present
+      let effectiveRequest = { ...targetTab.request };
+      if (effectiveRequest.collectionId) {
+        try {
+          const inherited = await storageService.resolveEffectiveConfiguration(effectiveRequest);
+          effectiveRequest = {
+            ...effectiveRequest,
+            auth: inherited.effectiveAuth,
+            headers: inherited.effectiveHeaders,
+          };
+        } catch (e) {
+          console.warn('Could not resolve inherited configuration:', e);
+        }
+      }
+
       const resolvedVars = useEnvironmentStore.getState().getResolvedVariables();
-      const response = await httpClient.execute(targetTab.request, {
+      const response = await httpClient.execute(effectiveRequest, {
         tabId,
         resolvedVariables: resolvedVars,
         timeoutMs: targetTab.request.settings?.timeout,

@@ -10,6 +10,11 @@ import { CodeSnippetModal } from '../common/CodeSnippetModal';
 import { NewCollectionModal } from '../collections/NewCollectionModal';
 import { NewFolderModal } from '../collections/NewFolderModal';
 import { NewRequestModal } from '../collections/NewRequestModal';
+import { CollectionSettingsModal } from '../collections/CollectionSettingsModal';
+import { CollectionRunnerModal } from '../collections/CollectionRunnerModal';
+import { CollectionImportExportModal } from '../import-export/CollectionImportExportModal';
+import { BackupRestoreModal } from '../backup/BackupRestoreModal';
+import { GlobalVariablesModal } from '../environments/GlobalVariablesModal';
 import { EnvironmentModal } from '../environments/EnvironmentModal';
 import { ExecutionConsole } from '../console/ExecutionConsole';
 import { useRequestStore } from '../../stores/requestStore';
@@ -83,6 +88,11 @@ export const AppLayout: React.FC = () => {
       <NewCollectionModal />
       <NewFolderModal />
       <NewRequestModal />
+      <CollectionSettingsModal />
+      <CollectionRunnerModal />
+      <CollectionImportExportModal />
+      <BackupRestoreModal />
+      <GlobalVariablesModal />
       <EnvironmentModal />
       <ExecutionConsole />
     </div>

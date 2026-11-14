@@ -8,6 +8,7 @@ import { BodyEditor } from './body/BodyEditor';
 import { ScriptsEditor } from './scripts/ScriptsEditor';
 import { RequestSettings } from './settings/RequestSettings';
 import { RequestValidatorBanner } from './validation/RequestValidatorBanner';
+import { VariablePreviewBanner } from '../common/VariablePreviewBanner';
 import { useUiStore } from '../../stores/uiStore';
 import { useRequestStore } from '../../stores/requestStore';
 
@@ -24,6 +25,9 @@ export const RequestBuilder: React.FC = () => {
       <div className="p-3 border-b border-blue-500/15 dark:border-blue-500/15 light:border-blue-200/60 shrink-0">
         <UrlBar />
       </div>
+
+      {/* Undefined Variables Warning Banner */}
+      <VariablePreviewBanner />
 
       {/* Validation Notice Banner (if any issues found) */}
       {request && <RequestValidatorBanner request={request} />}

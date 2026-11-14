@@ -5,7 +5,7 @@ export interface ApiKeyAuth {
   value: string;
   addTo?: 'header' | 'query';
   in?: 'header' | 'query';
-  enabled: boolean;
+  enabled?: boolean;
 }
 
 export interface BearerAuth {
