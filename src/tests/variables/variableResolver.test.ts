@@ -10,25 +10,25 @@ describe('Phase 4: Variable Substitution Engine', () => {
   it('resolves variables respecting the 5-tier precedence hierarchy', () => {
     // Hierarchical resolution order: Request > Environment > Folder > Collection > Global
     const globalVars: EnvironmentVariable[] = [
-      { id: '1', key: 'api_key', initialValue: 'global-key', currentValue: 'global-key', enabled: true, scope: 'global' },
-      { id: '2', key: 'base_url', initialValue: 'https://global.api', currentValue: 'https://global.api', enabled: true, scope: 'global' },
+      { id: '1', key: 'api_key', initialValue: 'global-key', currentValue: 'global-key', description: '', enabled: true, scope: 'global' },
+      { id: '2', key: 'base_url', initialValue: 'https://global.api', currentValue: 'https://global.api', description: '', enabled: true, scope: 'global' },
     ];
 
     const collectionVars: EnvironmentVariable[] = [
-      { id: '3', key: 'api_key', initialValue: 'collection-key', currentValue: 'collection-key', enabled: true, scope: 'collection' },
-      { id: '4', key: 'version', initialValue: 'v1', currentValue: 'v1', enabled: true, scope: 'collection' },
+      { id: '3', key: 'api_key', initialValue: 'collection-key', currentValue: 'collection-key', description: '', enabled: true, scope: 'collection' },
+      { id: '4', key: 'version', initialValue: 'v1', currentValue: 'v1', description: '', enabled: true, scope: 'collection' },
     ];
 
     const folderVars: EnvironmentVariable[] = [
-      { id: '5', key: 'api_key', initialValue: 'folder-key', currentValue: 'folder-key', enabled: true, scope: 'folder' },
+      { id: '5', key: 'api_key', initialValue: 'folder-key', currentValue: 'folder-key', description: '', enabled: true, scope: 'folder' },
     ];
 
     const envVars: EnvironmentVariable[] = [
-      { id: '6', key: 'api_key', initialValue: 'env-key', currentValue: 'env-key', enabled: true, scope: 'environment' },
+      { id: '6', key: 'api_key', initialValue: 'env-key', currentValue: 'env-key', description: '', enabled: true, scope: 'environment' },
     ];
 
     const requestVars: EnvironmentVariable[] = [
-      { id: '7', key: 'api_key', initialValue: 'req-key', currentValue: 'req-key', enabled: true, scope: 'request' },
+      { id: '7', key: 'api_key', initialValue: 'req-key', currentValue: 'req-key', description: '', enabled: true, scope: 'request' },
     ];
 
     // Case 1: All scopes present -> Request scope wins

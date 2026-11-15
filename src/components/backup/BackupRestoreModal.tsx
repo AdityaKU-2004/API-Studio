@@ -275,10 +275,10 @@ export const BackupRestoreModal: React.FC = () => {
                 <div className="p-3.5 rounded-lg bg-slate-900/80 border border-slate-800 space-y-3 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-slate-200">
-                      Backup Created: {new Date(parsedBackup.metadata.createdAt).toLocaleString()}
+                      Backup Created: {parsedBackup.metadata?.timestamp ? new Date(parsedBackup.metadata.timestamp).toLocaleString() : parsedBackup.metadata?.exportedAt || 'Unknown'}
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-600/20 text-cyan-300 border border-blue-500/30">
-                      Schema v{parsedBackup.version}
+                      Schema v{parsedBackup.metadata?.schemaVersion || 1}
                     </span>
                   </div>
 

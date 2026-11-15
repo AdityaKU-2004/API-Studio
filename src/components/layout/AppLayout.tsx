@@ -19,10 +19,29 @@ import { EnvironmentModal } from '../environments/EnvironmentModal';
 import { ExecutionConsole } from '../console/ExecutionConsole';
 import { useRequestStore } from '../../stores/requestStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useCollectionStore } from '../../stores/collectionStore';
+import { useEnvironmentStore } from '../../stores/environmentStore';
+import { useVariableStore } from '../../stores/variableStore';
+import { useHistoryStore } from '../../stores/historyStore';
+import { storageService } from '../../services/storage/storageService';
 
 export const AppLayout: React.FC = () => {
   const { sendRequest, saveActiveRequest, addTab, closeTab, activeTabId } = useRequestStore();
   const { theme } = useUiStore();
+
+  // Initialize IndexedDB storage and hydrate all persistent stores on boot
+  useEffect(() => {
+    const bootstrapStorage = async () => {
+      await storageService.init();
+      await Promise.all([
+        useCollectionStore.getState().loadCollections(),
+        useEnvironmentStore.getState().loadEnvironments(),
+        useVariableStore.getState().loadGlobalVariables(),
+        useHistoryStore.getState().loadHistory(),
+      ]);
+    };
+    bootstrapStorage();
+  }, []);
 
   // Global keyboard shortcuts
   useEffect(() => {

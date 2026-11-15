@@ -5,7 +5,8 @@ import { StorageService } from '../../services/storage/storageService';
 import { BackupService } from '../../services/storage/backupService';
 import { CollectionExporter } from '../../services/collections/collectionExporter';
 import { CollectionImporter } from '../../services/collections/collectionImporter';
-import { CollectionDefinition, FolderDefinition, ApiRequest, Environment } from '../../types';
+import { ApiRequest } from '../../types';
+import { createDefaultRequest } from '../../stores/requestStore';
 
 describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
   let testDb: ApiStudioDatabase;
@@ -53,11 +54,10 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
     });
 
     await testDb.requests.add({
+      ...createDefaultRequest('List Users', 'GET'),
       id: 'req-list-users',
       collectionId: 'col-main',
       folderId: 'fld-users',
-      name: 'List Users',
-      method: 'GET',
       url: 'https://api.test/users',
       params: [],
       headers: [],
@@ -94,10 +94,9 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
 
     // Request with auth: { type: 'inherit' } and overriding Accept header
     const req: ApiRequest = {
+      ...createDefaultRequest('Get Data', 'GET'),
       id: 'req-secure-1',
       collectionId: 'col-secure',
-      name: 'Get Data',
-      method: 'GET',
       url: 'https://api.test/data',
       auth: { type: 'inherit' },
       headers: [
@@ -128,7 +127,17 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
     await testDb.collections.add({
       id: 'col-backup',
       name: 'Col Backup',
-      variables: [{ id: 'v1', key: 'secret_key', initialValue: 'ultra-secret', isSecret: true, enabled: true }],
+      variables: [
+        {
+          id: 'v1',
+          key: 'secret_key',
+          initialValue: 'ultra-secret',
+          currentValue: 'ultra-secret',
+          description: '',
+          isSecret: true,
+          enabled: true,
+        },
+      ],
       order: 1,
       createdAt: 1,
       updatedAt: 1,
@@ -163,10 +172,9 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
       folders: [],
       requests: [
         {
+          ...createDefaultRequest('Restored Req', 'GET'),
           id: 'r-restored',
           collectionId: 'c-restored',
-          name: 'Restored Req',
-          method: 'GET' as const,
           url: 'https://api.test/ping',
           params: [],
           headers: [],
@@ -180,7 +188,6 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
       ],
       globalVariables: [],
       history: [],
-      settings: [],
     };
 
     // Restore into database
@@ -205,7 +212,16 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
       name: 'Postman Interop API',
       description: 'Testing Postman v2.1 export and import',
       auth: { type: 'bearer', bearer: { token: 'token-pm' } },
-      variables: [{ id: 'v-1', key: 'base_url', initialValue: 'https://api.pm.io', enabled: true }],
+      variables: [
+        {
+          id: 'v-1',
+          key: 'base_url',
+          initialValue: 'https://api.pm.io',
+          currentValue: 'https://api.pm.io',
+          description: '',
+          enabled: true,
+        },
+      ],
       order: 1,
       createdAt: 1,
       updatedAt: 1,
@@ -222,11 +238,10 @@ describe('Phase 4: Storage, Inheritance, Backup, and Import/Export', () => {
     });
 
     await testDb.requests.add({
+      ...createDefaultRequest('Get Users Postman', 'GET'),
       id: 'req-pm-1',
       collectionId: 'col-pm-export',
       folderId: 'fld-pm',
-      name: 'Get Users Postman',
-      method: 'GET',
       url: '{{base_url}}/users',
       params: [{ id: 'p1', key: 'limit', value: '10', enabled: true }],
       headers: [{ id: 'h1', key: 'Accept', value: 'application/json', enabled: true }],

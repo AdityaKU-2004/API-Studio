@@ -5,6 +5,7 @@ import { CollectionRepository } from '../../repositories/collectionRepository';
 import { FolderRepository } from '../../repositories/folderRepository';
 import { RequestRepository } from '../../repositories/requestRepository';
 import { CollectionDefinition, FolderDefinition, ApiRequest } from '../../types';
+import { createDefaultRequest } from '../../stores/requestStore';
 
 describe('Phase 4: Collection & Folder Operations', () => {
   let testDb: ApiStudioDatabase;
@@ -72,17 +73,14 @@ describe('Phase 4: Collection & Folder Operations', () => {
     });
 
     const sampleReq: ApiRequest = {
+      ...createDefaultRequest('Login', 'POST'),
       id: 'req-in-col',
       collectionId: 'col-to-delete',
       folderId: 'fld-in-col',
-      name: 'Login',
-      method: 'POST',
       url: 'https://api.test/login',
       params: [],
       headers: [],
       bodyType: 'json',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
     };
     await reqRepo.create(sampleReq);
 
@@ -150,17 +148,14 @@ describe('Phase 4: Collection & Folder Operations', () => {
 
   it('moves requests between collections and folders preserving metadata', async () => {
     const req: ApiRequest = {
+      ...createDefaultRequest('Get User Profile', 'GET'),
       id: 'req-move-test',
       collectionId: 'col-source',
       folderId: 'fld-source',
-      name: 'Get User Profile',
-      method: 'GET',
       url: 'https://api.test/profile',
       params: [{ id: 'p1', key: 'fields', value: 'all', enabled: true }],
       headers: [],
       bodyType: 'none',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
     };
     await reqRepo.create(req);
 

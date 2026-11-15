@@ -50,10 +50,10 @@ export const EnvironmentManager: React.FC<EnvironmentManagerProps> = ({ isSideba
     setIsEditingName(false);
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newEnvInput.trim()) {
-      const id = addEnvironment(newEnvInput.trim());
+      const id = await addEnvironment(newEnvInput.trim());
       setSelectedEnvId(id);
       setNewEnvInput('');
       setIsCreating(false);
@@ -182,10 +182,10 @@ export const EnvironmentManager: React.FC<EnvironmentManagerProps> = ({ isSideba
 
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const name = prompt('Enter new environment name:');
               if (name && name.trim()) {
-                const id = addEnvironment(name);
+                const id = await addEnvironment(name);
                 setSelectedEnvId(id);
               }
             }}

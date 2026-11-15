@@ -36,6 +36,10 @@ export const useVariableStore = create<VariableState>((set, get) => ({
     }
   },
 
+  loadVariables: async () => {
+    await get().loadGlobalVariables();
+  },
+
   addGlobalVariable: async (variable) => {
     const id = 'gvar-' + Date.now() + Math.random().toString(36).substring(2, 6);
     const newVar: EnvironmentVariable = {
@@ -48,6 +52,18 @@ export const useVariableStore = create<VariableState>((set, get) => ({
     return id;
   },
 
+  addVariable: async (key, initialValue = '', currentValue = '', isSecret = false, description = '') => {
+    return get().addGlobalVariable({
+      key,
+      initialValue,
+      currentValue,
+      isSecret,
+      description,
+      enabled: true,
+      scope: 'global',
+    });
+  },
+
   updateGlobalVariable: async (id, updates) => {
     await variableRepository.updateGlobal(id, updates);
     set((state) => ({
@@ -55,11 +71,19 @@ export const useVariableStore = create<VariableState>((set, get) => ({
     }));
   },
 
+  updateVariable: async (id, updates) => {
+    await get().updateGlobalVariable(id, updates);
+  },
+
   deleteGlobalVariable: async (id) => {
     await variableRepository.deleteGlobal(id);
     set((state) => ({
       globalVariables: state.globalVariables.filter((v) => v.id !== id),
     }));
+  },
+
+  deleteVariable: async (id) => {
+    await get().deleteGlobalVariable(id);
   },
 
   toggleGlobalVariable: async (id) => {

@@ -15,9 +15,7 @@ if (typeof window === 'undefined' || typeof window.indexedDB === 'undefined') {
   try {
     const fake = require('fake-indexeddb');
     if (fake && !globalThis.indexedDB) {
-      // @ts-expect-error fake-indexeddb polyfill
       globalThis.indexedDB = fake.indexedDB;
-      // @ts-expect-error fake-indexeddb polyfill
       globalThis.IDBKeyRange = fake.IDBKeyRange;
     }
   } catch {

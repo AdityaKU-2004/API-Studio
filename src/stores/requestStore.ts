@@ -531,13 +531,22 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       // Add to history unless manually aborted
       if (response.error?.type !== 'abort') {
         useHistoryStore.getState().addHistoryItem({
+          requestId: targetTab.request.id,
+          requestName: targetTab.request.name,
           method: targetTab.request.method,
           url: targetTab.request.url,
+          resolvedUrl: response.url,
           status: response.status,
           statusText: response.statusText,
           timeMs: response.timeMs,
+          sizeBytes: response.size,
           timestamp: response.timestamp,
+          executionResult: response.error || response.status === 0 ? 'error' : 'success',
+          errorSummary: response.error?.message,
           request: JSON.parse(JSON.stringify(targetTab.request)),
+          responseHeaders: response.headers,
+          responseBody: response.body,
+          responseBodySnippet: response.body?.slice(0, 500),
         });
       }
 

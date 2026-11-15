@@ -86,12 +86,22 @@ export const CollectionImportExportModal: React.FC = () => {
       const result = collectionImporter.parseInput(importInput);
       setParsedImport(result);
     } catch {
+      const fallbackCol = { id: '', name: 'Invalid JSON', createdAt: 0, updatedAt: 0 } as any;
       setParsedImport({
-        format: 'unknown',
-        collection: { name: 'Invalid JSON' } as any,
+        format: 'api-studio',
+        collectionName: 'Invalid JSON',
+        collection: fallbackCol,
         folders: [],
         requests: [],
         errors: ['Failed to parse JSON content'],
+        folderCount: 0,
+        requestCount: 0,
+        variableCount: 0,
+        parsedBundle: {
+          collection: fallbackCol,
+          folders: [],
+          requests: [],
+        },
       });
     }
   }, [importInput]);

@@ -133,6 +133,7 @@ export const CollectionSettingsModal: React.FC = () => {
         key: '',
         initialValue: '',
         currentValue: '',
+        description: '',
         isSecret: false,
         enabled: true,
         scope: isFolder ? 'folder' : 'collection',
@@ -293,7 +294,7 @@ export const CollectionSettingsModal: React.FC = () => {
                   <option value="none">No Auth</option>
                   <option value="bearer">Bearer Token</option>
                   <option value="basic">Basic Auth</option>
-                  <option value="apiKey">API Key</option>
+                  <option value="apikey">API Key</option>
                 </select>
               </div>
 
@@ -348,19 +349,26 @@ export const CollectionSettingsModal: React.FC = () => {
                 </div>
               )}
 
-              {auth.type === 'apiKey' && (
+              {auth.type === 'apikey' && (
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1.5">Key</label>
                     <input
                       type="text"
-                      value={auth.apiKey?.key || ''}
-                      onChange={(e) =>
+                      value={(auth.apikey || auth.apiKey)?.key || ''}
+                      onChange={(e) => {
+                        const nextApiKey = {
+                          key: e.target.value,
+                          value: (auth.apikey || auth.apiKey)?.value || '',
+                          addTo: (auth.apikey || auth.apiKey)?.addTo || 'header',
+                          enabled: true,
+                        };
                         setAuth({
                           ...auth,
-                          apiKey: { key: e.target.value, value: auth.apiKey?.value || '', addTo: auth.apiKey?.addTo || 'header' },
-                        })
-                      }
+                          apikey: nextApiKey,
+                          apiKey: nextApiKey,
+                        });
+                      }}
                       placeholder="X-API-Key"
                       className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
                     />
@@ -369,13 +377,20 @@ export const CollectionSettingsModal: React.FC = () => {
                     <label className="block text-xs font-medium text-slate-300 mb-1.5">Value</label>
                     <input
                       type="password"
-                      value={auth.apiKey?.value || ''}
-                      onChange={(e) =>
+                      value={(auth.apikey || auth.apiKey)?.value || ''}
+                      onChange={(e) => {
+                        const nextApiKey = {
+                          key: (auth.apikey || auth.apiKey)?.key || '',
+                          value: e.target.value,
+                          addTo: (auth.apikey || auth.apiKey)?.addTo || 'header',
+                          enabled: true,
+                        };
                         setAuth({
                           ...auth,
-                          apiKey: { key: auth.apiKey?.key || '', value: e.target.value, addTo: auth.apiKey?.addTo || 'header' },
-                        })
-                      }
+                          apikey: nextApiKey,
+                          apiKey: nextApiKey,
+                        });
+                      }}
                       placeholder="{{api_key}}"
                       className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400 font-mono"
                     />
@@ -383,13 +398,20 @@ export const CollectionSettingsModal: React.FC = () => {
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1.5">Add To</label>
                     <select
-                      value={auth.apiKey?.addTo || 'header'}
-                      onChange={(e) =>
+                      value={(auth.apikey || auth.apiKey)?.addTo || 'header'}
+                      onChange={(e) => {
+                        const nextApiKey = {
+                          key: (auth.apikey || auth.apiKey)?.key || '',
+                          value: (auth.apikey || auth.apiKey)?.value || '',
+                          addTo: e.target.value as 'header' | 'query',
+                          enabled: true,
+                        };
                         setAuth({
                           ...auth,
-                          apiKey: { key: auth.apiKey?.key || '', value: auth.apiKey?.value || '', addTo: e.target.value as any },
-                        })
-                      }
+                          apikey: nextApiKey,
+                          apiKey: nextApiKey,
+                        });
+                      }}
                       className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:border-cyan-400"
                     >
                       <option value="header">Header</option>

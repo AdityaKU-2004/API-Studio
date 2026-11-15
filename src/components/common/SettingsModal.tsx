@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useUiStore } from '../../stores/uiStore';
 import { Modal } from './Modal';
-import { Sliders, Code, Palette, Globe, Check } from 'lucide-react';
+import { Sliders, Code, Palette, Globe, Database, Check } from 'lucide-react';
+import { useHistoryStore } from '../../stores/historyStore';
 
 export const SettingsModal: React.FC = () => {
-  const { isSettingsOpen, setSettingsOpen } = useAppStore();
+  const { isSettingsOpen, setSettingsOpen, setBackupRestoreModalOpen } = useAppStore();
   const {
     theme,
     setTheme,
@@ -14,8 +15,9 @@ export const SettingsModal: React.FC = () => {
     generalSettings,
     updateGeneralSettings,
   } = useUiStore();
+  const { retentionLimit, setRetentionLimit, retainResponseBody, setRetainResponseBody } = useHistoryStore();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'editor' | 'appearance' | 'request'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'editor' | 'appearance' | 'request' | 'storage'>('general');
 
   return (
     <Modal
@@ -78,6 +80,19 @@ export const SettingsModal: React.FC = () => {
           >
             <Globe className="w-4 h-4" />
             Request
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('storage')}
+            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-left transition-colors cursor-pointer ${
+              activeTab === 'storage'
+                ? 'bg-blue-600/20 text-cyan-400 border border-blue-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            Storage & Backup
           </button>
         </div>
 
@@ -275,6 +290,59 @@ export const SettingsModal: React.FC = () => {
                   <option value="text/plain">text/plain</option>
                   <option value="application/xml">application/xml</option>
                 </select>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'storage' && (
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1.5">
+                  History Retention Limit
+                </label>
+                <input
+                  type="number"
+                  min={10}
+                  max={500}
+                  value={retentionLimit}
+                  onChange={(e) => setRetentionLimit(Math.max(10, Number(e.target.value) || 50))}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 focus:outline-none focus:border-cyan-400 text-slate-200 font-mono"
+                />
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  Maximum number of executed requests persisted in IndexedDB history.
+                </span>
+              </div>
+
+              <label className="flex items-center justify-between p-3 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer">
+                <div>
+                  <div className="font-medium text-slate-200">Retain Response Bodies in History</div>
+                  <div className="text-[11px] text-slate-500">
+                    Store full response body payloads for offline inspection
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={retainResponseBody}
+                  onChange={(e) => setRetainResponseBody(e.target.checked)}
+                  className="rounded border-slate-700 text-cyan-500 focus:ring-0"
+                />
+              </label>
+
+              <div className="p-3.5 rounded-lg bg-blue-950/20 border border-blue-500/20 space-y-2.5">
+                <div className="font-medium text-slate-200">Workspace Backup & Restore</div>
+                <p className="text-[11px] text-slate-400">
+                  Export a full snapshot of your collections, environments, global variables, and history, or restore from an archive file.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setBackupRestoreModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-cyan-300 border border-blue-500/30 font-medium transition-colors cursor-pointer"
+                >
+                  Open Backup & Restore
+                </button>
               </div>
             </div>
           )}

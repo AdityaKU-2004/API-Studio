@@ -179,10 +179,12 @@ export const CollectionItemRow: React.FC<CollectionItemRowProps> = ({
     const targetCollectionId = item.type === 'collection' ? item.id : item.collectionId;
     const targetFolderId = item.type === 'folder' ? item.id : null;
 
-    if (draggedItem.type === 'request') {
-      await moveRequest(draggedItem.id, targetCollectionId, targetFolderId);
-    } else if (draggedItem.type === 'folder') {
-      await moveFolder(draggedItem.id, targetCollectionId, targetFolderId);
+    if (targetCollectionId) {
+      if (draggedItem.type === 'request') {
+        await moveRequest(draggedItem.id, targetCollectionId, targetFolderId);
+      } else if (draggedItem.type === 'folder') {
+        await moveFolder(draggedItem.id, targetCollectionId, targetFolderId);
+      }
     }
 
     setDraggedItem(null);
