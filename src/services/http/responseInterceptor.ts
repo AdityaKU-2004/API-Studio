@@ -1,112 +1,116 @@
-import { ApiResponse, TestResult } from '../../types';
+import { ApiRequest, ApiResponse, ScriptVariableUpdates, TestResult } from '../../types';
+import { scriptExecutor } from '../scripting/scriptExecutor';
+import { buildScriptExecutionContext } from '../scripting/scriptContext';
 
 /**
- * Executes post-response test scripts in a safe context and returns test results.
+ * Executes post-response test scripts inside the isolated QuickJS WASM sandbox.
  */
-export function executeTestScripts(
+export async function executeTestScripts(
   scriptContent: string,
   response: ApiResponse,
-  variables: Record<string, string>
-): { testResults: TestResult[]; updatedVariables: Record<string, string> } {
-  const testResults: TestResult[] = [];
+  variables: Record<string, string>,
+  request?: ApiRequest
+): Promise<{
+  testResults: TestResult[];
+  updatedVariables: Record<string, string>;
+  variableUpdates: ScriptVariableUpdates;
+}> {
   const updatedVariables: Record<string, string> = { ...variables };
 
   if (!scriptContent || !scriptContent.trim()) {
-    return { testResults, updatedVariables };
+    return {
+      testResults: [],
+      updatedVariables,
+      variableUpdates: { environment: {}, collectionVariables: {}, globals: {}, variables: {} },
+    };
   }
 
-  try {
-    // Postman-compatible pm sandbox API
-    const pm = {
-      test: (name: string, fn: () => void) => {
-        try {
-          fn();
-          testResults.push({ name, passed: true });
-        } catch (err) {
-          testResults.push({
-            name,
-            passed: false,
-            message: (err as Error).message || String(err),
-          });
-        }
-      },
-      expect: (actual: unknown) => ({
-        to: {
-          equal: (expected: unknown) => {
-            if (actual !== expected) {
-              throw new Error(`Expected ${JSON.stringify(actual)} to equal ${JSON.stringify(expected)}`);
-            }
-          },
-          be: {
-            oneOf: (expectedList: unknown[]) => {
-              if (!expectedList.includes(actual)) {
-                throw new Error(`Expected ${JSON.stringify(actual)} to be one of ${JSON.stringify(expectedList)}`);
-              }
-            },
-            true: () => {
-              if (actual !== true) throw new Error(`Expected ${JSON.stringify(actual)} to be true`);
-            },
-            below: (num: number) => {
-              if (typeof actual !== 'number' || actual >= num) {
-                throw new Error(`Expected ${actual} to be below ${num}`);
-              }
-            },
-          },
-        },
-      }),
-      response: {
-        code: response.status,
-        status: response.statusText,
-        responseTime: response.timeMs,
-        headers: response.headers,
-        text: () => response.body,
-        json: () => {
-          if (response.parsedBody) return response.parsedBody;
-          return JSON.parse(response.body);
-        },
-        to: {
-          have: {
-            status: (expectedCode: number) => {
-              if (response.status !== expectedCode) {
-                throw new Error(
-                  `Expected response status ${expectedCode} but received ${response.status} ${response.statusText}`
-                );
-              }
-            },
-            header: (headerName: string) => {
-              const lower = headerName.toLowerCase();
-              const found = Object.keys(response.headers).some((k) => k.toLowerCase() === lower);
-              if (!found) {
-                throw new Error(`Expected response to have header "${headerName}"`);
-              }
-            },
-          },
-        },
-      },
-      environment: {
-        set: (key: string, value: unknown) => {
-          updatedVariables[key] = String(value);
-        },
-        get: (key: string) => updatedVariables[key],
-      },
-      variables: {
-        set: (key: string, value: unknown) => {
-          updatedVariables[key] = String(value);
-        },
-        get: (key: string) => updatedVariables[key],
-      },
-    };
+  const fallbackRequest: ApiRequest = request || {
+    id: response.requestId,
+    name: 'Request',
+    method: (response.method as ApiRequest['method']) || 'GET',
+    url: response.url,
+    params: [],
+    headers: [],
+    auth: { type: 'none' },
+    bodyType: 'none',
+    rawBody: '',
+    formData: [],
+    urlEncoded: [],
+    body: { mode: 'none', rawContent: {}, formData: [], urlEncoded: [], binary: {} },
+    scripts: {
+      preRequest: { script: '', enabled: false },
+      postResponse: { script: scriptContent, enabled: true },
+    },
+    preRequestScript: '',
+    testScript: scriptContent,
+    settings: {
+      timeout: 10000,
+      followRedirects: true,
+      maxRedirects: 5,
+      autoEncodeUrl: true,
+      sslVerification: true,
+      allowInsecureCertificates: false,
+      httpVersion: 'auto',
+      connectionTimeout: 5000,
+      keepAlive: true,
+      disableCache: false,
+      followAuthRedirects: true,
+      customUserAgent: 'API Studio/2.0',
+    },
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
 
-    // Execute within Function sandbox
-    const scriptRunner = new Function('pm', scriptContent);
-    scriptRunner(pm);
-  } catch (globalErr) {
+  const ctx = buildScriptExecutionContext({
+    stage: 'post-response',
+    request: fallbackRequest,
+    response,
+    environmentVariables: variables,
+  });
+
+  const result = await scriptExecutor.execute(scriptContent, ctx);
+
+  for (const [k, v] of Object.entries(result.variableUpdates.environment)) {
+    if (v === null) delete updatedVariables[k];
+    else updatedVariables[k] = v;
+  }
+  for (const [k, v] of Object.entries(result.variableUpdates.variables)) {
+    if (v === null) delete updatedVariables[k];
+    else updatedVariables[k] = v;
+  }
+
+  const testResults: TestResult[] = result.tests.map((t) => ({
+    id: t.id,
+    name: t.name,
+    passed: t.passed,
+    status: t.status,
+    message: t.error,
+    error: t.error,
+    expected: t.expected,
+    actual: t.actual,
+    durationMs: t.durationMs,
+    source: 'script',
+  }));
+
+  if (result.error) {
     testResults.push({
-      name: 'Script Execution',
+      id: `script-err-${Date.now()}`,
+      name: 'Post-Response Script Execution',
       passed: false,
-      message: `Script error: ${(globalErr as Error).message}`,
+      status: 'failed',
+      message: result.error.message,
+      error: result.error.line
+        ? `Line ${result.error.line}: ${result.error.message}`
+        : result.error.message,
+      durationMs: result.durationMs,
+      source: 'script',
     });
   }
 
-  return { testResults, updatedVariables };
+  return {
+    testResults,
+    updatedVariables,
+    variableUpdates: result.variableUpdates,
+  };
 }

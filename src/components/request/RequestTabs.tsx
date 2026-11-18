@@ -11,6 +11,8 @@ export const RequestTabs: React.FC = () => {
 
   const enabledParamsCount = request?.params.filter((p) => p.enabled && p.key).length || 0;
   const enabledHeadersCount = request?.headers.filter((h) => h.enabled && h.key).length || 0;
+  const assertionsCount = request?.assertions?.filter((a) => a.enabled).length || 0;
+  const hasSchema = Boolean(request?.schemaValidation?.enabled);
   const authType = request?.auth.type;
   const hasAuth = authType && authType !== 'none';
   const hasBody = request?.bodyType && request.bodyType !== 'none';
@@ -25,6 +27,8 @@ export const RequestTabs: React.FC = () => {
     { id: 'auth', label: 'Authorization', badge: hasAuth ? authType?.toUpperCase() : undefined },
     { id: 'body', label: 'Body', badge: hasBody ? request?.bodyType?.toUpperCase() : undefined },
     { id: 'scripts', label: 'Scripts' },
+    { id: 'assertions', label: 'Assertions', badge: assertionsCount > 0 ? assertionsCount : undefined },
+    { id: 'schema', label: 'Schema', badge: hasSchema ? 'ON' : undefined },
     { id: 'settings', label: 'Settings' },
   ];
 

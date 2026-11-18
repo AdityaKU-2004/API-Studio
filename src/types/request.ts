@@ -1,5 +1,8 @@
 import { AuthConfig } from './auth';
 import { BodyType, RequestBody, FormDataItem } from './body';
+import { AssertionRule, RequestSchemaConfig } from './testing';
+import { ScriptFailurePolicy } from './scripting';
+import { EnvironmentVariable } from './environment';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -15,10 +18,12 @@ export interface RequestScripts {
   preRequest: {
     script: string;
     enabled: boolean;
+    failurePolicy?: ScriptFailurePolicy;
   };
   postResponse: {
     script: string;
     enabled: boolean;
+    failurePolicy?: ScriptFailurePolicy;
   };
 }
 
@@ -52,6 +57,9 @@ export interface RequestDefinition {
   body: RequestBody;
   scripts: RequestScripts;
   settings: RequestSettings;
+  assertions?: AssertionRule[];
+  schemaValidation?: RequestSchemaConfig;
+  variables?: EnvironmentVariable[];
   createdAt: number;
   updatedAt: number;
   collectionId?: string;

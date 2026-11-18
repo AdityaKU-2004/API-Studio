@@ -117,19 +117,22 @@ export class RequestExecutor {
         timing
       );
 
-      // 5. Execute post-response test scripts if configured
-      const testScript =
-        request.scripts?.postResponse?.enabled !== false
-          ? request.scripts?.postResponse?.script || request.testScript
-          : '';
+      // 5. Execute post-response test scripts if configured and not handled by upstream testRunner
+      if (!options.skipScripts) {
+        const testScript =
+          request.scripts?.postResponse?.enabled !== false
+            ? request.scripts?.postResponse?.script || request.testScript
+            : '';
 
-      if (testScript) {
-        const { testResults } = executeTestScripts(
-          testScript,
-          apiResponse,
-          options.resolvedVariables || {}
-        );
-        apiResponse.tests = testResults;
+        if (testScript) {
+          const { testResults } = await executeTestScripts(
+            testScript,
+            apiResponse,
+            options.resolvedVariables || {},
+            request
+          );
+          apiResponse.tests = testResults;
+        }
       }
 
       return apiResponse;

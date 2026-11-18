@@ -6,8 +6,15 @@ import { useExecutionStore } from './executionStore';
 import { useEnvironmentStore } from './environmentStore';
 import { useHistoryStore } from './historyStore';
 import { useCollectionStore } from './collectionStore';
+import { useVariableStore } from './variableStore';
+import { useTestingStore } from './testingStore';
+import { useScriptingStore } from './scriptingStore';
 import { buildUrlWithParams, parseUrl } from '../services/request/urlBuilder';
 import { storageService } from '../services/storage/storageService';
+import { runSingleRequestPipeline } from '../services/testing/testRunner';
+import { persistScriptVariableUpdates } from '../services/scripting/variablePersistence';
+
+const activePipelineRefs = new Map<string, { cancel: () => void }>();
 
 export const createDefaultRequest = (name = 'New Request', method: HttpMethod = 'GET'): ApiRequest => {
   const now = Date.now();
@@ -494,17 +501,88 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         }
       }
 
-      const resolvedVars = useEnvironmentStore.getState().getResolvedVariables();
-      const response = await httpClient.execute(effectiveRequest, {
+      const envStore = useEnvironmentStore.getState();
+      const activeEnv = envStore.environments.find((e) => e.id === envStore.activeEnvironmentId);
+      const globVars = useVariableStore.getState().globalVariables;
+      const parentCollection = effectiveRequest.collectionId
+        ? useCollectionStore.getState().collections.find((c) => c.id === effectiveRequest.collectionId)
+        : undefined;
+
+      const execRef = { cancel: () => {} };
+      activePipelineRefs.set(tabId, execRef);
+
+      const pipelineOut = await runSingleRequestPipeline({
+        request: effectiveRequest,
         tabId,
-        resolvedVariables: resolvedVars,
+        environmentVariables: activeEnv?.variables || [],
+        collectionVariables: parentCollection?.variables || [],
+        globalVariables: globVars,
+        resolveSchemaById: async (schemaId) => {
+          return useTestingStore.getState().getSchemaById(schemaId)?.schemaText;
+        },
         timeoutMs: targetTab.request.settings?.timeout,
+        executionRef: execRef,
       });
 
+      activePipelineRefs.delete(tabId);
+
+      // Persist script variable mutations (pm.environment, pm.collectionVariables, pm.globals)
+      await persistScriptVariableUpdates(pipelineOut.variableUpdates, {
+        environmentId: envStore.activeEnvironmentId,
+        collectionId: effectiveRequest.collectionId,
+      });
+
+      // Persist pm.variables (request-local) updates back into active tab request if changed
+      if (Object.keys(pipelineOut.variableUpdates.variables).length > 0) {
+        const localList = [...(effectiveRequest.variables || [])];
+        for (const [k, val] of Object.entries(pipelineOut.variableUpdates.variables)) {
+          const idx = localList.findIndex((v) => v.key === k);
+          if (val === null) {
+            if (idx !== -1) localList.splice(idx, 1);
+          } else if (idx !== -1) {
+            localList[idx] = { ...localList[idx], currentValue: val, enabled: true };
+          } else {
+            localList.push({
+              id: `lvar-${Date.now()}-${k}`,
+              key: k,
+              initialValue: val,
+              currentValue: val,
+              description: 'Set by pm.variables script',
+              enabled: true,
+              isSecret: false,
+              scope: 'request',
+            });
+          }
+        }
+        get().updateActiveRequest({ variables: localList });
+      }
+
+      // Record script console logs separately from assertion results
+      useScriptingStore
+        .getState()
+        .recordPipelineLogs(
+          tabId,
+          pipelineOut.consoleLogs,
+          pipelineOut.preRequestResult,
+          pipelineOut.postResponseResult
+        );
+
+      const response = pipelineOut.response;
       execStore.finishExecution(tabId, response);
 
       // Log completion to console
-      if (response.error || response.status === 0) {
+      if (pipelineOut.abortedBeforeRequest) {
+        execStore.addLog({
+          level: 'error',
+          tabId,
+          requestId: targetTab.request.id,
+          method: targetTab.request.method,
+          url: targetTab.request.url,
+          title: 'Pre-request Script Failed',
+          message: pipelineOut.scriptError?.message || 'Execution halted by pre-request script',
+          durationMs: response.timeMs,
+        });
+      } else if (response.error || response.status === 0) {
         execStore.addLog({
           level: response.error?.type === 'abort' ? 'warn' : 'error',
           tabId,
@@ -529,7 +607,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       }
 
       // Add to history unless manually aborted
-      if (response.error?.type !== 'abort') {
+      if (response.error?.type !== 'abort' && !pipelineOut.abortedBeforeRequest) {
         useHistoryStore.getState().addHistoryItem({
           requestId: targetTab.request.id,
           requestName: targetTab.request.name,
@@ -555,6 +633,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         set({ activeResponse: response, isSending: false });
       }
     } catch {
+      activePipelineRefs.delete(tabId);
       if (get().activeTabId === tabId) {
         set({ isSending: false });
       }
@@ -564,13 +643,15 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   cancelRequest: (targetTabId) => {
     const state = get();
     const tabId = targetTabId || state.activeTabId;
+    activePipelineRefs.get(tabId)?.cancel();
+    activePipelineRefs.delete(tabId);
     httpClient.cancel(tabId);
     useExecutionStore.getState().cancelExecution(tabId);
     useExecutionStore.getState().addLog({
       level: 'warn',
       tabId,
       title: 'Request Cancelled',
-      message: 'User aborted in-flight HTTP request',
+      message: 'User aborted in-flight HTTP request / script execution',
     });
     if (state.activeTabId === tabId) {
       set({ isSending: false });

@@ -12,6 +12,7 @@ export interface ApplicationSettings {
   activeEnvironmentId: string | null;
   historyRetentionLimit: number;
   retainResponseBodiesInHistory: boolean;
+  reportRetentionLimit?: number;
   defaultTimeout: number;
   updatedAt: number;
 }

@@ -44,4 +44,5 @@ export interface RequestExecutionOptions {
   signal?: AbortSignal;
   tabId?: string;
   resolvedVariables?: Record<string, string>;
+  skipScripts?: boolean;
 }

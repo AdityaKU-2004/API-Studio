@@ -1,4 +1,6 @@
 import { RequestTiming, NetworkError } from './http';
+import { ScriptConsoleEntry, ScriptExecutionError } from './scripting';
+import { SchemaValidationResult } from './testing';
 
 export interface ResponseCookie {
   name: string;
@@ -11,10 +13,17 @@ export interface ResponseCookie {
 }
 
 export interface TestResult {
+  id?: string;
   name: string;
   passed: boolean;
+  status?: 'passed' | 'failed' | 'skipped';
   message?: string;
+  error?: string;
+  expected?: string;
+  actual?: string;
   durationMs?: number;
+  source?: 'script' | 'assertion' | 'schema';
+  group?: string;
 }
 
 export type ResponseContentTypeCategory =
@@ -59,6 +68,9 @@ export interface ApiResponse {
 
   cookies: ResponseCookie[];
   tests: TestResult[];
+  scriptLogs?: ScriptConsoleEntry[];
+  scriptError?: ScriptExecutionError;
+  schemaValidation?: SchemaValidationResult;
 
   error?: NetworkError;
   isBinary?: boolean;

@@ -1,6 +1,55 @@
 import { ApiStudioDatabase } from './database';
 import { initialCollections, sampleRequests, initialEnvironments } from '../data/mockData';
-import { CollectionDefinition, FolderDefinition, ApiRequest } from '../types';
+import { CollectionDefinition, FolderDefinition, ApiRequest, SavedJsonSchema } from '../types';
+import { BUILT_IN_SCRIPT_TEMPLATES } from '../services/scripting/builtInTemplates';
+
+const SAMPLE_SCHEMAS: SavedJsonSchema[] = [
+  {
+    id: 'schema-user-profile',
+    name: 'User Profile Schema',
+    description: 'Validates standard user resource JSON payload with id, name, and email.',
+    schemaText: JSON.stringify(
+      {
+        type: 'object',
+        required: ['id', 'name'],
+        properties: {
+          id: { type: ['number', 'string'] },
+          name: { type: 'string', minLength: 1 },
+          email: { type: 'string' },
+          username: { type: 'string' },
+        },
+        additionalProperties: true,
+      },
+      null,
+      2
+    ),
+    createdAt: 1710000000000,
+    updatedAt: 1710000000000,
+  },
+  {
+    id: 'schema-post-list',
+    name: 'Resource Collection Array',
+    description: 'Validates an array of resource items with numeric IDs and titles.',
+    schemaText: JSON.stringify(
+      {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'number' },
+            title: { type: 'string' },
+          },
+        },
+      },
+      null,
+      2
+    ),
+    createdAt: 1710000000000,
+    updatedAt: 1710000000000,
+  },
+];
 
 export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promise<void> {
   const collectionCount = await dbInstance.collections.count();
@@ -25,7 +74,6 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
         updatedAt: Date.now(),
       });
 
-      // Extract children
       let itemOrder = 0;
       for (const child of mockCol.children || []) {
         itemOrder++;
@@ -40,7 +88,6 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
             updatedAt: Date.now(),
           });
 
-          // Requests inside folder
           let subOrder = 0;
           for (const grandChild of child.children || []) {
             subOrder++;
@@ -64,7 +111,6 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
       }
     }
 
-    // Ensure any remaining sample requests are added
     for (const [id, req] of Object.entries(sampleRequests)) {
       if (!requestsToInsert.some((r) => r.id === id)) {
         requestsToInsert.push({
@@ -88,11 +134,8 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
         await dbInstance.collections.bulkAdd(collectionsToInsert);
         await dbInstance.folders.bulkAdd(foldersToInsert);
         await dbInstance.requests.bulkAdd(requestsToInsert);
-
-        // Seed initial environments
         await dbInstance.environments.bulkAdd(initialEnvironments);
 
-        // Seed initial global variables
         await dbInstance.globalVariables.bulkAdd([
           {
             id: 'gvar-1',
@@ -116,7 +159,6 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
           },
         ]);
 
-        // Seed initial settings
         await dbInstance.settings.put({
           id: 'app_settings',
           theme: 'dark',
@@ -126,10 +168,26 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
           activeEnvironmentId: 'env-dev',
           historyRetentionLimit: 50,
           retainResponseBodiesInHistory: true,
+          reportRetentionLimit: 50,
           defaultTimeout: 10000,
           updatedAt: Date.now(),
         });
       }
     );
+  }
+
+  // Non-destructive v2 seed: ensure built-in script templates & sample schemas exist
+  try {
+    const templateCount = await dbInstance.scriptTemplates.count();
+    if (templateCount === 0) {
+      await dbInstance.scriptTemplates.bulkPut(BUILT_IN_SCRIPT_TEMPLATES);
+    }
+
+    const schemaCount = await dbInstance.jsonSchemas.count();
+    if (schemaCount === 0) {
+      await dbInstance.jsonSchemas.bulkPut(SAMPLE_SCHEMAS);
+    }
+  } catch {
+    // ignore if called on an old mock instance
   }
 }

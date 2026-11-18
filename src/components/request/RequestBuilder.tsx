@@ -7,6 +7,8 @@ import { AuthorizationEditor } from './auth/AuthorizationEditor';
 import { BodyEditor } from './body/BodyEditor';
 import { ScriptsEditor } from './scripts/ScriptsEditor';
 import { RequestSettings } from './settings/RequestSettings';
+import { AssertionList } from '../testing/AssertionList';
+import { SchemaValidator } from '../testing/SchemaValidator';
 import { RequestValidatorBanner } from './validation/RequestValidatorBanner';
 import { VariablePreviewBanner } from '../common/VariablePreviewBanner';
 import { useUiStore } from '../../stores/uiStore';
@@ -42,6 +44,8 @@ export const RequestBuilder: React.FC = () => {
         {activeRequestTab === 'auth' && <AuthorizationEditor />}
         {activeRequestTab === 'body' && <BodyEditor />}
         {activeRequestTab === 'scripts' && <ScriptsEditor />}
+        {activeRequestTab === 'assertions' && <AssertionList />}
+        {activeRequestTab === 'schema' && <SchemaValidator mode="request" />}
         {activeRequestTab === 'settings' && <RequestSettings />}
       </div>
     </div>

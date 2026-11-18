@@ -3,6 +3,11 @@ import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { WorkspaceTabs } from './WorkspaceTabs';
 import { WorkspaceSplit } from './WorkspaceSplit';
+import { CollectionRunner } from '../runner/CollectionRunner';
+import { TestSuiteManager } from '../suites/TestSuiteManager';
+import { TestReports } from '../reports/TestReports';
+import { ScriptTemplates } from '../scripting/ScriptTemplates';
+import { SchemaValidator } from '../testing/SchemaValidator';
 import { SearchDialog } from '../common/SearchDialog';
 import { SettingsModal } from '../common/SettingsModal';
 import { DocsModal } from '../common/DocsModal';
@@ -19,15 +24,21 @@ import { EnvironmentModal } from '../environments/EnvironmentModal';
 import { ExecutionConsole } from '../console/ExecutionConsole';
 import { useRequestStore } from '../../stores/requestStore';
 import { useUiStore } from '../../stores/uiStore';
+import { useAppStore } from '../../stores/appStore';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useEnvironmentStore } from '../../stores/environmentStore';
 import { useVariableStore } from '../../stores/variableStore';
 import { useHistoryStore } from '../../stores/historyStore';
+import { useScriptingStore } from '../../stores/scriptingStore';
+import { useTestingStore } from '../../stores/testingStore';
+import { useTestSuiteStore } from '../../stores/testSuiteStore';
+import { useReportStore } from '../../stores/reportStore';
 import { storageService } from '../../services/storage/storageService';
 
 export const AppLayout: React.FC = () => {
   const { sendRequest, saveActiveRequest, addTab, closeTab, activeTabId } = useRequestStore();
   const { theme } = useUiStore();
+  const { activeView } = useAppStore();
 
   // Initialize IndexedDB storage and hydrate all persistent stores on boot
   useEffect(() => {
@@ -38,6 +49,10 @@ export const AppLayout: React.FC = () => {
         useEnvironmentStore.getState().loadEnvironments(),
         useVariableStore.getState().loadGlobalVariables(),
         useHistoryStore.getState().loadHistory(),
+        useScriptingStore.getState().loadTemplates(),
+        useTestingStore.getState().loadTestingData(),
+        useTestSuiteStore.getState().loadSuites(),
+        useReportStore.getState().loadReports(),
       ]);
     };
     bootstrapStorage();
@@ -46,23 +61,23 @@ export const AppLayout: React.FC = () => {
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Enter or Cmd+Enter: Send request
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         sendRequest();
       }
-      // Ctrl+S or Cmd+S: Save request
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveActiveRequest();
       }
-      // Ctrl+Shift+N or Cmd+Shift+N or Ctrl+T: New tab
-      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'n') ||
-          ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement))) {
+      if (
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'n') ||
+        ((e.ctrlKey || e.metaKey) &&
+          e.key.toLowerCase() === 't' &&
+          !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement))
+      ) {
         e.preventDefault();
         addTab();
       }
-      // Ctrl+W or Cmd+W: Close active tab
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
         e.preventDefault();
         if (activeTabId) closeTab(activeTabId);
@@ -72,6 +87,21 @@ export const AppLayout: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [sendRequest, saveActiveRequest, addTab, closeTab, activeTabId]);
+
+  const renderMainContent = () => {
+    if (activeView === 'runner') return <CollectionRunner />;
+    if (activeView === 'suites') return <TestSuiteManager />;
+    if (activeView === 'reports') return <TestReports />;
+    if (activeView === 'templates') return <ScriptTemplates />;
+    if (activeView === 'schemas') return <SchemaValidator mode="library" />;
+
+    return (
+      <>
+        <WorkspaceTabs />
+        <WorkspaceSplit />
+      </>
+    );
+  };
 
   return (
     <div
@@ -91,11 +121,7 @@ export const AppLayout: React.FC = () => {
 
         {/* Center/Right Workspace Area */}
         <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-          {/* Workspace Tabs Header */}
-          <WorkspaceTabs />
-
-          {/* Split Request & Response Workspace */}
-          <WorkspaceSplit />
+          {renderMainContent()}
         </main>
       </div>
 
