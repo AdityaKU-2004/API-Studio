@@ -16,6 +16,7 @@ export interface ImportPreviewResult {
   folderCount: number;
   requestCount: number;
   variableCount: number;
+  warnings?: string[];
   parsedBundle: {
     collection: CollectionDefinition;
     folders: FolderDefinition[];
@@ -192,6 +193,7 @@ export class CollectionImporter {
 
     const folders: FolderDefinition[] = [];
     const requests: ApiRequest[] = [];
+    const warnings: string[] = [];
     let orderCounter = 0;
 
     const traverseItems = (items: any[], parentFolderId: string | null = null) => {
@@ -246,13 +248,29 @@ export class CollectionImporter {
             enabled: !q.disabled,
           }));
 
-          // Body
+          // Body & Protocol Detection
           const defaultReq = createDefaultRequest();
           const body = { ...defaultReq.body };
           let rawBody = '';
           let bodyType: any = 'none';
+          const ext = item._api_studio;
+          let requestType: ApiRequest['requestType'] = ext?.requestType || 'http';
+          let graphql = ext?.graphql;
+          const websocket = ext?.websocket;
+          const sse = ext?.sse;
 
-          if (req.body) {
+          if (req.body?.mode === 'graphql' && req.body.graphql) {
+            requestType = 'graphql';
+            if (!graphql) {
+              graphql = {
+                endpoint: url,
+                method: method === 'GET' ? 'GET' : 'POST',
+                query: req.body.graphql.query || '',
+                variablesText: req.body.graphql.variables || '{}',
+                queryHistory: [],
+              };
+            }
+          } else if (req.body) {
             if (req.body.mode === 'raw') {
               const lang = req.body.options?.raw?.language;
               bodyType = lang === 'json' ? 'json' : lang === 'xml' ? 'xml' : 'text';
@@ -272,13 +290,20 @@ export class CollectionImporter {
                 description: u.description || '',
                 enabled: !u.disabled,
               }));
+            } else if (req.body.mode === 'formdata') {
+              warnings.push(`Request "${item.name || 'Untitled'}" uses form-data; verify file upload entries manually.`);
             }
+          }
+
+          if ((requestType === 'websocket' || requestType === 'sse') && !ext) {
+            warnings.push(`Request "${item.name || 'Untitled'}" was imported without API Studio extension metadata.`);
           }
 
           requests.push({
             ...defaultReq,
             id: reqId,
             name: item.name || 'Untitled Request',
+            requestType,
             method,
             url,
             bodyType,
@@ -286,6 +311,9 @@ export class CollectionImporter {
             headers,
             params: queryParams,
             body,
+            graphql,
+            websocket,
+            sse,
             collectionId: newColId,
             folderId: parentFolderId || undefined,
             order: orderCounter,
@@ -306,6 +334,7 @@ export class CollectionImporter {
       folders,
       requests,
       errors: [],
+      warnings,
       folderCount: folders.length,
       requestCount: requests.length,
       variableCount: collection.variables?.length || 0,

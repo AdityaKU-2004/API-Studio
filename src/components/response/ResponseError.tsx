@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle, ShieldAlert, Clock, XCircle, WifiOff, HelpCircle } from 'lucide-react';
-import { NetworkError } from '../../types';
+import { ApiRequest, ApiResponse, NetworkError } from '../../types';
+import { useDiagnosticsStore } from '../../stores/diagnosticsStore';
+import { DiagnosticsPanel } from '../response-analysis/DiagnosticsPanel';
 
 interface ResponseErrorProps {
   error: NetworkError;
   url: string;
+  request?: ApiRequest;
+  response?: ApiResponse;
 }
 
-export const ResponseError: React.FC<ResponseErrorProps> = ({ error, url }) => {
+export const ResponseError: React.FC<ResponseErrorProps> = ({
+  error,
+  url,
+  request,
+  response,
+}) => {
+  const computeDiagnostics = useDiagnosticsStore((s) => s.computeDiagnostics);
+
+  const diagnostics = useMemo(() => {
+    if (!request) return [];
+    return computeDiagnostics(request.id, request, response);
+  }, [computeDiagnostics, request, response]);
+
   const getErrorIcon = () => {
     switch (error.type) {
       case 'cors':
@@ -46,7 +62,7 @@ export const ResponseError: React.FC<ResponseErrorProps> = ({ error, url }) => {
             <span
               className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold border ${getBadgeColor()}`}
             >
-              {error.type.replace('_', ' ')}
+              {error.type === 'cors' ? 'BROWSER FETCH / POSSIBLE CORS' : error.type.replace('_', ' ')}
             </span>
             <span className="text-xs font-semibold text-slate-200">{error.message}</span>
           </div>
@@ -60,30 +76,38 @@ export const ResponseError: React.FC<ResponseErrorProps> = ({ error, url }) => {
         <span className="text-cyan-300 break-all">{url}</span>
       </div>
 
-      {/* Troubleshooting Steps */}
-      {error.troubleshooting && error.troubleshooting.length > 0 && (
-        <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800/80 space-y-2.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-            <HelpCircle className="w-4 h-4 text-cyan-400" />
-            <span>Troubleshooting Recommendations</span>
-          </div>
-          <ul className="space-y-2 text-xs text-slate-400 list-disc list-inside">
-            {error.troubleshooting.map((tip, idx) => (
-              <li key={idx} className="leading-relaxed">
-                <span className="text-slate-300">{tip}</span>
-              </li>
-            ))}
-          </ul>
+      {/* Request & Failure Diagnostics */}
+      {diagnostics.length > 0 ? (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-slate-300">Request Diagnostics</div>
+          <DiagnosticsPanel diagnostics={diagnostics} />
         </div>
+      ) : (
+        error.troubleshooting &&
+        error.troubleshooting.length > 0 && (
+          <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800/80 space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+              <HelpCircle className="w-4 h-4 text-cyan-400" />
+              <span>Troubleshooting Recommendations</span>
+            </div>
+            <ul className="space-y-2 text-xs text-slate-400 list-disc list-inside">
+              {error.troubleshooting.map((tip, idx) => (
+                <li key={idx} className="leading-relaxed">
+                  <span className="text-slate-300">{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
       )}
 
-      {/* Architectural Note for Phase 7 */}
-      {error.type === 'cors' && (
+      {/* Honest Browser Fetch Boundary Notice */}
+      {(error.type === 'cors' || error.type === 'dns_or_network') && (
         <div className="p-3.5 rounded-lg bg-blue-950/20 border border-blue-500/30 text-[11px] text-blue-300 leading-relaxed">
-          <span className="font-semibold text-blue-200">Desktop Architecture Roadmap:</span> When
-          running in the browser, CORS restrictions are enforced by the browser's JavaScript sandbox.
-          In Phase 7, API Studio will introduce native Tauri 2 / Rust execution, completely bypassing
-          browser CORS limitations and unlocking raw socket connections.
+          <span className="font-semibold text-blue-200">Browser Network Boundary:</span>{' '}
+          Standard browser Fetch reports generic network failures identically whether caused by missing
+          CORS response headers, refused TCP ports, DNS resolution failures, or untrusted TLS
+          certificates. Phase 7 desktop transport will distinguish these socket-level errors directly.
         </div>
       )}
     </div>

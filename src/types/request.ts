@@ -3,6 +3,12 @@ import { BodyType, RequestBody, FormDataItem } from './body';
 import { AssertionRule, RequestSchemaConfig } from './testing';
 import { ScriptFailurePolicy } from './scripting';
 import { EnvironmentVariable } from './environment';
+import {
+  RequestProtocolType,
+  GraphQLRequestConfig,
+  WebSocketConfig,
+  SseConfig,
+} from './protocols';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -49,6 +55,7 @@ export interface RequestSettings {
 export interface RequestDefinition {
   id: string;
   name: string;
+  requestType?: RequestProtocolType;
   method: HttpMethod;
   url: string;
   params: KeyValueItem[];
@@ -60,6 +67,9 @@ export interface RequestDefinition {
   assertions?: AssertionRule[];
   schemaValidation?: RequestSchemaConfig;
   variables?: EnvironmentVariable[];
+  graphql?: GraphQLRequestConfig;
+  websocket?: WebSocketConfig;
+  sse?: SseConfig;
   createdAt: number;
   updatedAt: number;
   collectionId?: string;
@@ -87,6 +97,7 @@ export interface RequestTab {
   id: string;
   requestId?: string;
   title: string;
+  requestType?: RequestProtocolType;
   method: HttpMethod;
   isDirty?: boolean;
   request: ApiRequest;

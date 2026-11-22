@@ -4,27 +4,26 @@ import {
   Trash2,
   X,
   Search,
-  Filter,
-  CheckCircle,
-  AlertTriangle,
-  AlertCircle,
-  Info,
+  Download,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import { useExecutionStore } from '../../stores/executionStore';
-import { ConsoleLogLevel } from '../../types';
+import { ConsoleLogCategory, ConsoleLogLevel } from '../../types';
 import { ConsoleEntry } from './ConsoleEntry';
 
 export const ExecutionConsole: React.FC = () => {
-  const { logs, clearLogs, isConsoleOpen, setConsoleOpen } = useExecutionStore();
+  const { logs, clearLogs, exportLogs, isConsoleOpen, setConsoleOpen } = useExecutionStore();
   const [filterLevel, setFilterLevel] = useState<ConsoleLogLevel | 'all'>('all');
+  const [filterCategory, setFilterCategory] = useState<ConsoleLogCategory | 'all'>('all');
   const [search, setSearch] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
       if (filterLevel !== 'all' && log.level !== filterLevel) return false;
+      const cat = log.category || 'http';
+      if (filterCategory !== 'all' && cat !== filterCategory) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesMsg = log.message.toLowerCase().includes(q);
@@ -34,7 +33,18 @@ export const ExecutionConsole: React.FC = () => {
       }
       return true;
     });
-  }, [logs, filterLevel, search]);
+  }, [logs, filterLevel, filterCategory, search]);
+
+  const handleExportLogs = () => {
+    const content = exportLogs('json');
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `api_studio_console_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (!isConsoleOpen) return null;
 
@@ -45,27 +55,44 @@ export const ExecutionConsole: React.FC = () => {
       }`}
     >
       {/* Console Header Bar */}
-      <div className="flex items-center justify-between px-3 h-9 border-b border-slate-800 bg-[#121620] shrink-0 text-xs">
+      <div className="flex items-center justify-between px-3 h-9 border-b border-slate-800 bg-[#121620] shrink-0 text-xs gap-2 overflow-x-auto">
         {/* Left: Title + Entry Count */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Terminal className="w-4 h-4 text-cyan-400" />
           <span className="font-semibold text-slate-200">Execution Console</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-cyan-300 font-mono">
-            {logs.length}
+          <span className="font-mono text-[11px] tabular-nums text-cyan-300">
+            ({filteredLogs.length}/{logs.length})
           </span>
         </div>
 
-        {/* Center: Filters & Search (only visible when not minimized) */}
+        {/* Center: Filters & Search */}
         {!isMinimized && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Category Filter */}
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value as ConsoleLogCategory | 'all')}
+              className="h-6 px-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300 focus:outline-none focus:border-cyan-400"
+              title="Filter by protocol or subsystem category"
+            >
+              <option value="all">All Categories</option>
+              <option value="http">HTTP</option>
+              <option value="graphql">GraphQL</option>
+              <option value="websocket">WebSocket</option>
+              <option value="sse">SSE</option>
+              <option value="script">Scripts</option>
+              <option value="system">System</option>
+            </select>
+
             {/* Level Filters */}
             <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800">
               {(
                 [
                   { id: 'all', label: 'All' },
-                  { id: 'info', label: 'Info', Icon: Info },
-                  { id: 'warn', label: 'Warnings', Icon: AlertTriangle },
-                  { id: 'error', label: 'Errors', Icon: AlertCircle },
+                  { id: 'info', label: 'Info' },
+                  { id: 'success', label: 'OK' },
+                  { id: 'warn', label: 'Warn' },
+                  { id: 'error', label: 'Error' },
                 ] as const
               ).map((tab) => {
                 const isActive = filterLevel === tab.id;
@@ -74,7 +101,7 @@ export const ExecutionConsole: React.FC = () => {
                     key={tab.id}
                     type="button"
                     onClick={() => setFilterLevel(tab.id)}
-                    className={`px-2 py-0.5 rounded text-[11px] transition-colors flex items-center gap-1 cursor-pointer ${
+                    className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-blue-600/30 text-cyan-300 font-medium'
                         : 'text-slate-400 hover:text-slate-200'
@@ -100,8 +127,17 @@ export const ExecutionConsole: React.FC = () => {
           </div>
         )}
 
-        {/* Right: Actions (Clear, Minimize, Close) */}
-        <div className="flex items-center gap-1">
+        {/* Right: Actions (Export, Clear, Minimize, Close) */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={handleExportLogs}
+            disabled={logs.length === 0}
+            title="Export Sanitized Console Logs (JSON)"
+            className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-slate-800 disabled:opacity-40 transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
           <button
             type="button"
             onClick={clearLogs}
@@ -135,7 +171,11 @@ export const ExecutionConsole: React.FC = () => {
           {filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center text-slate-500 text-xs">
               <Terminal className="w-6 h-6 mb-2 opacity-40 text-slate-400" />
-              <span>{logs.length === 0 ? 'No execution logs recorded yet. Send a request to begin logging.' : 'No logs match the current filter.'}</span>
+              <span>
+                {logs.length === 0
+                  ? 'No execution logs recorded yet. Send a request or connect a stream to begin logging.'
+                  : 'No logs match the current filter.'}
+              </span>
             </div>
           ) : (
             filteredLogs.map((log) => <ConsoleEntry key={log.id} entry={log} />)

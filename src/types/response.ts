@@ -75,4 +75,7 @@ export interface ApiResponse {
   error?: NetworkError;
   isBinary?: boolean;
   binaryDataUrl?: string; // object URL for previewing images / downloads
+  headerSizeBytes?: number;
+  headerSizeEstimated?: boolean;
+  contentEncoding?: string;
 }

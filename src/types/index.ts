@@ -13,6 +13,10 @@ export * from './scripting';
 export * from './testing';
 export * from './runner';
 export * from './testReport';
+export * from './protocols';
+export * from './comparison';
+export * from './developerTools';
+export * from './diagnostics';
 
 export interface Workspace {
   id: string;
@@ -29,6 +33,8 @@ export type SidebarSection =
   | 'reports'
   | 'templates'
   | 'schemas'
+  | 'comparison'
+  | 'devtools'
   | 'apis'
   | 'mock-servers'
   | 'monitors';

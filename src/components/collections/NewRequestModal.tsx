@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useCollectionStore } from '../../stores/collectionStore';
-import { useRequestStore, createDefaultRequest } from '../../stores/requestStore';
+import { useRequestStore } from '../../stores/requestStore';
+import { createProtocolAwareRequest } from '../../services/request/protocolRequestFactory';
 import { Modal } from '../common/Modal';
-import { HttpMethod } from '../../types';
+import { HttpMethod, RequestProtocolType } from '../../types';
+import { RequestTypeSelector } from '../request-types/RequestTypeSelector';
 
 export const NewRequestModal: React.FC = () => {
   const {
@@ -16,23 +18,55 @@ export const NewRequestModal: React.FC = () => {
   const { addRequestToCollection, collections } = useCollectionStore();
   const { openRequestInTab } = useRequestStore();
 
+  const [protocol, setProtocol] = useState<RequestProtocolType>('http');
   const [name, setName] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [url, setUrl] = useState('{{base_url}}/');
-  const [selectedCol, setSelectedCol] = useState(targetCollectionIdForNewItem || collections[0]?.id || '');
+  const [selectedCol, setSelectedCol] = useState(
+    targetCollectionIdForNewItem || collections[0]?.id || ''
+  );
+
+  useEffect(() => {
+    if (isNewRequestModalOpen) {
+      setSelectedCol(targetCollectionIdForNewItem || collections[0]?.id || '');
+    }
+  }, [isNewRequestModalOpen, targetCollectionIdForNewItem, collections]);
+
+  const handleProtocolChange = (nextProto: RequestProtocolType) => {
+    setProtocol(nextProto);
+    if (nextProto === 'graphql') {
+      setMethod('POST');
+      setUrl('{{base_url}}/graphql');
+    } else if (nextProto === 'websocket') {
+      setUrl('wss://echo.websocket.events');
+    } else if (nextProto === 'sse') {
+      setMethod('GET');
+      setUrl('https://stream.wikimedia.org/v2/stream/recentchange');
+    } else {
+      setUrl('{{base_url}}/');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newReq = createDefaultRequest(name.trim(), method);
-    newReq.url = url.trim() || '{{base_url}}/';
+    const newReq = createProtocolAwareRequest(protocol, name.trim(), method);
+    const cleanUrl = url.trim();
+    if (cleanUrl) {
+      newReq.url = cleanUrl;
+      if (newReq.graphql) newReq.graphql.endpoint = cleanUrl;
+      if (newReq.websocket) newReq.websocket.url = cleanUrl;
+      if (newReq.sse) newReq.sse.url = cleanUrl;
+    }
 
-    const colId = selectedCol || targetCollectionIdForNewItem || collections[0]?.id || 'col-users';
+    const colId =
+      selectedCol || targetCollectionIdForNewItem || collections[0]?.id || 'col-users';
     addRequestToCollection(colId, targetFolderIdForNewItem, newReq);
     openRequestInTab(newReq);
 
     setName('');
+    setProtocol('http');
     setMethod('GET');
     setUrl('{{base_url}}/');
     setNewRequestModalOpen(false);
@@ -43,9 +77,14 @@ export const NewRequestModal: React.FC = () => {
       isOpen={isNewRequestModalOpen}
       onClose={() => setNewRequestModalOpen(false)}
       title="Create New Request"
-      description="Add an API endpoint to your collection"
+      description="Add an HTTP, GraphQL, WebSocket, or SSE request to your collection"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <div>
+          <label className="block text-slate-300 font-medium mb-1.5">Protocol</label>
+          <RequestTypeSelector value={protocol} onChange={handleProtocolChange} />
+        </div>
+
         <div>
           <label className="block text-slate-300 font-medium mb-1.5">Request Name</label>
           <input
@@ -54,29 +93,47 @@ export const NewRequestModal: React.FC = () => {
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Get Organization Details, Search Inventory"
+            placeholder={
+              protocol === 'graphql'
+                ? 'e.g., Get User Profile Query'
+                : protocol === 'websocket'
+                ? 'e.g., Live Ticker Socket'
+                : protocol === 'sse'
+                ? 'e.g., Realtime Event Feed'
+                : 'e.g., Get Organization Details'
+            }
             className="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 focus:outline-none focus:border-cyan-400 text-slate-200"
           />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div>
-            <label className="block text-slate-300 font-medium mb-1.5">Method</label>
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value as HttpMethod)}
-              className="w-full px-2.5 py-2 rounded-lg bg-slate-900/60 border border-slate-700 focus:outline-none focus:border-cyan-400 text-slate-200 font-mono font-semibold"
-            >
-              {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const).map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          {protocol === 'http' && (
+            <div>
+              <label className="block text-slate-300 font-medium mb-1.5">Method</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value as HttpMethod)}
+                className="w-full px-2.5 py-2 rounded-lg bg-slate-900/60 border border-slate-700 focus:outline-none focus:border-cyan-400 text-slate-200 font-mono font-semibold"
+              >
+                {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          <div className="col-span-2">
-            <label className="block text-slate-300 font-medium mb-1.5">URL</label>
+          <div className={protocol === 'http' ? 'col-span-2' : 'col-span-3'}>
+            <label className="block text-slate-300 font-medium mb-1.5">
+              {protocol === 'graphql'
+                ? 'GraphQL Endpoint URL'
+                : protocol === 'websocket'
+                ? 'WebSocket URL (ws:// or wss://)'
+                : protocol === 'sse'
+                ? 'SSE Stream Endpoint URL'
+                : 'URL'}
+            </label>
             <input
               type="text"
               value={url}

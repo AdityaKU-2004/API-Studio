@@ -50,8 +50,8 @@ export function handleNetworkError(
       };
     }
 
-    // 4. Fetch TypeError (CORS, DNS failure, Connection Refused, or Network Offline)
-    if (error instanceof TypeError && msg.includes('failed to fetch')) {
+    // 4. Fetch TypeError (CORS, DNS failure, Connection Refused, TLS failure, or Network Offline)
+    if (error instanceof TypeError && (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed'))) {
       // Check if browser is offline
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         return {
@@ -65,24 +65,39 @@ export function handleNetworkError(
         };
       }
 
-      // Check for local IP / localhost vs cross-origin
       const isLocal =
         url.includes('localhost') ||
         url.includes('127.0.0.1') ||
         url.includes('0.0.0.0') ||
         url.includes('192.168.');
 
+      let isCrossOrigin = !isLocal;
+      try {
+        if (typeof window !== 'undefined' && window.location?.origin) {
+          isCrossOrigin = new URL(url).origin !== window.location.origin;
+        }
+      } catch {
+        // ignore
+      }
+
       return {
-        type: 'cors',
-        message: 'CORS restriction or network connection failure',
-        details:
-          'The browser blocked access to this response because of cross-origin security restrictions (CORS), or the server is unreachable.',
+        type: isCrossOrigin ? 'cors' : 'dns_or_network',
+        message: isCrossOrigin
+          ? 'Network request failed (possible CORS policy, unreachable host, or TLS error)'
+          : 'Network request failed (server unreachable, connection refused, or DNS error)',
+        details: isCrossOrigin
+          ? 'The browser Fetch API threw a generic TypeError — commonly caused by cross-origin security restrictions (CORS), an unreachable host, or a TLS/DNS failure without exposing low-level socket codes.'
+          : 'The browser Fetch API threw a generic TypeError without exposing low-level socket or CORS failure codes.',
         troubleshooting: [
-          'CORS restriction: Modern browsers enforce Same-Origin Policy. The remote server must respond with "Access-Control-Allow-Origin: *" or allow this applet origin.',
+          ...(isCrossOrigin
+            ? [
+                'Possible CORS restriction: Remote servers must include "Access-Control-Allow-Origin" allowing this origin when called from a browser.',
+              ]
+            : []),
           isLocal
-            ? 'Local Server: Ensure your local server is actively running on the specified port and configured to allow CORS requests.'
-            : 'Third-party API: Some external APIs disallow direct browser client access without a server-side proxy.',
-          'Note: In Phase 7, desktop execution with Tauri/Rust will bypass browser CORS restrictions completely.',
+            ? 'Local Server: Confirm the service is running on the target host and port.'
+            : 'Connectivity & DNS: Verify the hostname resolves, the server is reachable, and HTTPS certificates are valid.',
+          'Desktop execution in Phase 7 (Tauri/Rust) will bypass browser CORS policies and expose exact socket errors.',
         ],
       };
     }

@@ -59,6 +59,7 @@ export const ResponsePanel: React.FC = () => {
             )}
             {activeResponseTab === 'timing' && (
               <ResponseTiming
+                response={activeResponse}
                 timing={
                   activeResponse.timing || {
                     startTime: activeResponse.timestamp,

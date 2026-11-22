@@ -23,7 +23,7 @@ interface UiState {
   splitRatio: number; // percentage (30 to 75)
   activeRequestTab: 'params' | 'headers' | 'auth' | 'body' | 'scripts' | 'assertions' | 'schema' | 'settings';
   activeResponseTab: 'body' | 'headers' | 'cookies' | 'tests' | 'timing';
-  responseBodyFormat: 'pretty' | 'raw' | 'preview';
+  responseBodyFormat: 'pretty' | 'raw' | 'preview' | 'tree' | 'jsonpath';
   editorSettings: EditorSettings;
   generalSettings: GeneralSettings;
 

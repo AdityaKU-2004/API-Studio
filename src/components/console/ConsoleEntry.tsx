@@ -70,6 +70,13 @@ export const ConsoleEntry: React.FC<ConsoleEntryProps> = ({ entry }) => {
           <span>{entry.level}</span>
         </span>
 
+        {/* Category tag */}
+        {entry.category && (
+          <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-mono bg-slate-800/90 text-cyan-300 border border-slate-700/70 shrink-0">
+            {entry.category}
+          </span>
+        )}
+
         {/* Method Badge if present */}
         {entry.method && <MethodBadge method={entry.method as any} size="sm" />}
 

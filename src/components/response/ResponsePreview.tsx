@@ -139,6 +139,32 @@ export const ResponsePreview: React.FC<ResponsePreviewProps> = ({ response }) =>
     );
   }
 
+  // 3b. PDF preview
+  if (response.contentType?.toLowerCase().includes('application/pdf') && response.binaryDataUrl) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] text-slate-400">
+          <span className="font-mono text-cyan-300">
+            PDF Document · {formatBytes(response.size || response.sizeBytes || 0)}
+          </span>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer"
+          >
+            <Download className="w-3 h-3" />
+            <span>Download PDF</span>
+          </button>
+        </div>
+        <iframe
+          title="Response PDF Preview"
+          src={response.binaryDataUrl}
+          className="flex-1 w-full h-full border-none bg-slate-900"
+        />
+      </div>
+    );
+  }
+
   // 4. Default / Fallback preview
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4 select-none">

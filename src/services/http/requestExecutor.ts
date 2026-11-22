@@ -85,11 +85,11 @@ export class RequestExecutor {
       const headersReceivedTime = performance.now();
       const waitingMs = Math.round(headersReceivedTime - prepareEndTime);
 
-      // 3. Read body stream
+      // 3. Read body stream & parse
       const parsedBody = await parseFetchResponse(fetchResponse);
 
       const bodyEndTime = performance.now();
-      const downloadMs = Math.round(bodyEndTime - headersReceivedTime);
+      const downloadAndParseMs = Math.round(bodyEndTime - headersReceivedTime);
       const totalDuration = Math.round(bodyEndTime - startTime);
 
       // Clean up controller & timeout
@@ -103,7 +103,7 @@ export class RequestExecutor {
         duration: totalDuration,
         prepareMs,
         waitingMs,
-        downloadMs,
+        downloadMs: downloadAndParseMs,
       };
 
       // 4. Normalize response

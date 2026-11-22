@@ -12,8 +12,13 @@ import {
   ScriptTemplate,
   SavedJsonSchema,
   AssertionConfiguration,
+  SavedProtocolConfig,
+  WebSocketMessageTemplate,
+  SavedSseEventMetadata,
+  ComparisonSession,
+  DeveloperToolPreferences,
 } from '../types';
-import { DATABASE_NAME, DB_SCHEMA_V1, DB_SCHEMA_V2 } from './schema';
+import { DATABASE_NAME, DB_SCHEMA_V1, DB_SCHEMA_V2, DB_SCHEMA_V3 } from './schema';
 
 // In Node.js / test environments, ensure indexedDB is available via fake-indexeddb
 if (typeof window === 'undefined' || typeof window.indexedDB === 'undefined') {
@@ -44,10 +49,18 @@ export class ApiStudioDatabase extends Dexie {
   jsonSchemas!: Table<SavedJsonSchema, string>;
   assertionConfigurations!: Table<AssertionConfiguration, string>;
 
+  // Phase 6 tables
+  protocolConfigs!: Table<SavedProtocolConfig, string>;
+  wsMessageTemplates!: Table<WebSocketMessageTemplate, string>;
+  sseEventLogs!: Table<SavedSseEventMetadata, string>;
+  comparisonSessions!: Table<ComparisonSession, string>;
+  developerToolPreferences!: Table<DeveloperToolPreferences, string>;
+
   constructor(dbName = DATABASE_NAME) {
     super(dbName);
     this.version(1).stores(DB_SCHEMA_V1);
     this.version(2).stores(DB_SCHEMA_V2);
+    this.version(3).stores(DB_SCHEMA_V3);
   }
 }
 

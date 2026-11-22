@@ -16,9 +16,10 @@ import {
 import { useHistoryStore } from '../../stores/historyStore';
 import { useRequestStore } from '../../stores/requestStore';
 import { useAppStore } from '../../stores/appStore';
+import { useComparisonStore } from '../../stores/comparisonStore';
 import { MethodBadge } from '../common/MethodBadge';
 import { ConfirmationModal } from '../common/ConfirmationModal';
-import { HistoryItem } from '../../types';
+import { HistoryItem, RequestProtocolType } from '../../types';
 
 interface HistoryPageProps {
   isSidebarView?: boolean;
@@ -27,10 +28,12 @@ interface HistoryPageProps {
 export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false }) => {
   const { history, clearHistory, deleteHistoryItem, retentionLimit, setRetentionLimit, retainResponseBody, setRetainResponseBody } = useHistoryStore();
   const { openRequestInTab } = useRequestStore();
-  const { setNewRequestModalOpen } = useAppStore();
+  const { setActiveView } = useAppStore();
+  const { loadFromHistory } = useComparisonStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<string>('ALL');
+  const [protocolFilter, setProtocolFilter] = useState<'ALL' | RequestProtocolType>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | '2xx' | '3xx' | '4xx' | '5xx' | 'ERR'>('ALL');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'fastest' | 'slowest'>('newest');
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
@@ -42,6 +45,8 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
     let result = history.filter((item) => {
       const matchesSearch = item.url.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesMethod = selectedMethod === 'ALL' || item.method === selectedMethod;
+      const itemProtocol = item.requestType || item.request?.requestType || 'http';
+      const matchesProtocol = protocolFilter === 'ALL' || itemProtocol === protocolFilter;
 
       let matchesStatus = true;
       if (statusFilter === '2xx') matchesStatus = item.status >= 200 && item.status < 300;
@@ -50,7 +55,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
       else if (statusFilter === '5xx') matchesStatus = item.status >= 500 && item.status < 600;
       else if (statusFilter === 'ERR') matchesStatus = item.status === 0 || item.status >= 500;
 
-      return matchesSearch && matchesMethod && matchesStatus;
+      return matchesSearch && matchesMethod && matchesProtocol && matchesStatus;
     });
 
     if (sortOrder === 'newest') result.sort((a, b) => b.timestamp - a.timestamp);
@@ -59,7 +64,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
     else if (sortOrder === 'slowest') result.sort((a, b) => b.timeMs - a.timeMs);
 
     return result;
-  }, [history, searchQuery, selectedMethod, statusFilter, sortOrder]);
+  }, [history, searchQuery, selectedMethod, protocolFilter, statusFilter, sortOrder]);
 
   const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
@@ -141,22 +146,40 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
           </select>
         </div>
 
-        {/* Status filters */}
-        <div className="flex items-center gap-1 pt-0.5">
-          {(['ALL', '2xx', '3xx', '4xx', '5xx', 'ERR'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusFilter(s)}
-              className={`px-1.5 py-0.2 rounded text-[9px] font-mono transition-colors cursor-pointer ${
-                statusFilter === s
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+        {/* Protocol & Status filters */}
+        <div className="flex items-center justify-between gap-1 pt-0.5">
+          <div className="flex items-center gap-1">
+            {(['ALL', 'http', 'graphql', 'websocket', 'sse'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setProtocolFilter(p)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase transition-colors cursor-pointer ${
+                  protocolFilter === p
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {p === 'graphql' ? 'GQL' : p === 'websocket' ? 'WS' : p}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            {(['ALL', '2xx', '4xx', '5xx', 'ERR'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatusFilter(s)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors cursor-pointer ${
+                  statusFilter === s
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -176,7 +199,11 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
             >
               <div className="flex items-center justify-between gap-1.5 mb-1">
                 <div className="flex items-center gap-1.5">
-                  <MethodBadge method={item.method} size="sm" />
+                  <MethodBadge
+                    method={item.method}
+                    requestType={item.requestType || item.request?.requestType}
+                    size="sm"
+                  />
                   <span
                     className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${getStatusColor(
                       item.status
@@ -207,7 +234,11 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800/80 bg-slate-900/50">
               <div className="flex items-center gap-2">
-                <MethodBadge method={selectedHistoryItem.method} size="sm" />
+                <MethodBadge
+                  method={selectedHistoryItem.method}
+                  requestType={selectedHistoryItem.requestType || selectedHistoryItem.request?.requestType}
+                  size="sm"
+                />
                 <span
                   className={`font-mono text-xs px-2 py-0.5 rounded border ${getStatusColor(
                     selectedHistoryItem.status
@@ -290,6 +321,11 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
                   <pre className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto max-h-60">
                     {selectedHistoryItem.responseBody || 'No body recorded for this response.'}
                   </pre>
+                  {selectedHistoryItem.protocolMetadata && (
+                    <div className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] font-mono text-slate-400">
+                      Protocol Metadata: {JSON.stringify(selectedHistoryItem.protocolMetadata)}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -332,10 +368,32 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ isSidebarView = false 
                 <button
                   type="button"
                   onClick={() => {
+                    loadFromHistory('left', selectedHistoryItem);
+                    setActiveView('comparison');
+                    setSelectedHistoryItem(null);
+                  }}
+                  className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 transition-colors cursor-pointer"
+                >
+                  Compare A
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadFromHistory('right', selectedHistoryItem);
+                    setActiveView('comparison');
+                    setSelectedHistoryItem(null);
+                  }}
+                  className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 transition-colors cursor-pointer"
+                >
+                  Compare B
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     openRequestInTab(selectedHistoryItem.request);
                     setSelectedHistoryItem(null);
                   }}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Open in Tab</span>

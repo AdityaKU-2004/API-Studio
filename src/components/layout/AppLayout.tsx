@@ -8,6 +8,8 @@ import { TestSuiteManager } from '../suites/TestSuiteManager';
 import { TestReports } from '../reports/TestReports';
 import { ScriptTemplates } from '../scripting/ScriptTemplates';
 import { SchemaValidator } from '../testing/SchemaValidator';
+import { ResponseComparisonWorkspace } from '../../features/comparison/ResponseComparisonWorkspace';
+import { DeveloperToolsDashboard } from '../../features/developer-tools/DeveloperToolsDashboard';
 import { SearchDialog } from '../common/SearchDialog';
 import { SettingsModal } from '../common/SettingsModal';
 import { DocsModal } from '../common/DocsModal';
@@ -33,6 +35,9 @@ import { useScriptingStore } from '../../stores/scriptingStore';
 import { useTestingStore } from '../../stores/testingStore';
 import { useTestSuiteStore } from '../../stores/testSuiteStore';
 import { useReportStore } from '../../stores/reportStore';
+import { useComparisonStore } from '../../stores/comparisonStore';
+import { useDeveloperToolsStore } from '../../stores/developerToolsStore';
+import { useWebSocketStore } from '../../stores/websocketStore';
 import { storageService } from '../../services/storage/storageService';
 
 export const AppLayout: React.FC = () => {
@@ -53,6 +58,9 @@ export const AppLayout: React.FC = () => {
         useTestingStore.getState().loadTestingData(),
         useTestSuiteStore.getState().loadSuites(),
         useReportStore.getState().loadReports(),
+        useComparisonStore.getState().loadSavedSessions(),
+        useDeveloperToolsStore.getState().loadPreferences(),
+        useWebSocketStore.getState().loadTemplates(),
       ]);
     };
     bootstrapStorage();
@@ -94,6 +102,8 @@ export const AppLayout: React.FC = () => {
     if (activeView === 'reports') return <TestReports />;
     if (activeView === 'templates') return <ScriptTemplates />;
     if (activeView === 'schemas') return <SchemaValidator mode="library" />;
+    if (activeView === 'comparison') return <ResponseComparisonWorkspace />;
+    if (activeView === 'devtools') return <DeveloperToolsDashboard />;
 
     return (
       <>

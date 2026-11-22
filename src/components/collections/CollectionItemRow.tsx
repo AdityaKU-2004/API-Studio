@@ -239,7 +239,11 @@ export const CollectionItemRow: React.FC<CollectionItemRowProps> = ({
           ) : item.type === 'folder' ? (
             <Folder className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
           ) : item.request?.method ? (
-            <MethodBadge method={item.request.method} size="sm" />
+            <MethodBadge
+              method={item.request.method}
+              requestType={item.request.requestType}
+              size="sm"
+            />
           ) : (
             <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           )}

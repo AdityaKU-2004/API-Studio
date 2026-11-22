@@ -1,7 +1,16 @@
 import { create } from 'zustand';
-import { ApiRequest, ApiResponse, HttpMethod, RequestTab } from '../types';
+import { ApiRequest, ApiResponse, HttpMethod, RequestProtocolType, RequestTab } from '../types';
 import { sampleRequests } from '../data/mockData';
 import { httpClient } from '../services/http/httpClient';
+import { websocketClient } from '../services/protocols/websocket/websocketClient';
+import { sseClient } from '../services/protocols/sse/sseClient';
+import {
+  createDefaultGraphQLConfig,
+  createDefaultSseConfig,
+  createDefaultWebSocketConfig,
+  createProtocolAwareRequest,
+} from '../services/request/protocolRequestFactory';
+import { protocolConfigRepository } from '../repositories/protocolConfigRepository';
 import { useExecutionStore } from './executionStore';
 import { useEnvironmentStore } from './environmentStore';
 import { useHistoryStore } from './historyStore';
@@ -80,10 +89,31 @@ const initialTab: RequestTab = {
   id: 'tab-initial-1',
   requestId: initialTabRequest.id,
   title: initialTabRequest.name,
+  requestType: initialTabRequest.requestType || 'http',
   method: initialTabRequest.method,
   isDirty: false,
   request: JSON.parse(JSON.stringify(initialTabRequest)),
 };
+
+function persistProtocolConfigIfNeeded(req: ApiRequest): void {
+  const protocol = req.requestType || 'http';
+  if (protocol === 'http') return;
+  const payload =
+    protocol === 'graphql'
+      ? req.graphql
+      : protocol === 'websocket'
+      ? req.websocket
+      : req.sse;
+  if (!payload) return;
+  void protocolConfigRepository.saveConfig({
+    id: `proto-${req.id}`,
+    requestId: req.id,
+    protocol,
+    name: req.name,
+    configJson: JSON.stringify(payload),
+    updatedAt: Date.now(),
+  });
+}
 
 interface RequestState {
   tabs: RequestTab[];
@@ -92,7 +122,7 @@ interface RequestState {
   activeResponse: ApiResponse | null;
   pendingCloseTabId: string | null;
 
-  addTab: (customRequest?: Partial<ApiRequest>) => string;
+  addTab: (customRequest?: Partial<ApiRequest>, protocol?: RequestProtocolType) => string;
   openRequestInTab: (request: ApiRequest) => string;
   closeTab: (tabId: string, force?: boolean) => boolean;
   closeOtherTabs: (tabId: string) => void;
@@ -100,6 +130,7 @@ interface RequestState {
   duplicateTab: (tabId: string) => string;
   renameTab: (tabId: string, newTitle: string) => void;
   setActiveTabId: (tabId: string) => void;
+  switchActiveRequestType: (protocol: RequestProtocolType) => void;
   updateActiveRequest: (updates: Partial<ApiRequest>, syncUrl?: boolean) => void;
   updateUrlAndSyncParams: (newUrl: string) => void;
   saveActiveRequest: () => void;
@@ -117,13 +148,23 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   activeResponse: null,
   pendingCloseTabId: null,
 
-  addTab: (customRequest) => {
-    const newReq = { ...createDefaultRequest(), ...customRequest };
-    const tabId = 'tab-' + Date.now();
+  addTab: (customRequest, protocol) => {
+    const targetProtocol = protocol || customRequest?.requestType || 'http';
+    const baseReq =
+      targetProtocol === 'http'
+        ? createDefaultRequest()
+        : createProtocolAwareRequest(targetProtocol, customRequest?.name, customRequest?.method);
+    const newReq: ApiRequest = {
+      ...baseReq,
+      ...customRequest,
+      requestType: targetProtocol,
+    };
+    const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
     const newTab: RequestTab = {
       id: tabId,
       requestId: newReq.id,
       title: newReq.name,
+      requestType: targetProtocol,
       method: newReq.method,
       isDirty: false,
       request: newReq,
@@ -146,14 +187,25 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       return existing.id;
     }
 
-    const tabId = 'tab-' + Date.now();
+    const cloned: ApiRequest = JSON.parse(JSON.stringify(request));
+    const protocol = cloned.requestType || 'http';
+    if (protocol === 'graphql' && !cloned.graphql) {
+      cloned.graphql = createDefaultGraphQLConfig(cloned.url);
+    } else if (protocol === 'websocket' && !cloned.websocket) {
+      cloned.websocket = createDefaultWebSocketConfig(cloned.url);
+    } else if (protocol === 'sse' && !cloned.sse) {
+      cloned.sse = createDefaultSseConfig(cloned.url);
+    }
+
+    const tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
     const newTab: RequestTab = {
       id: tabId,
-      requestId: request.id,
-      title: request.name,
-      method: request.method,
+      requestId: cloned.id,
+      title: cloned.name,
+      requestType: protocol,
+      method: cloned.method,
       isDirty: false,
-      request: JSON.parse(JSON.stringify(request)),
+      request: cloned,
     };
 
     set((s) => ({
@@ -175,8 +227,10 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       return false; // Not closed yet
     }
 
-    // Cancel active network request for this tab if running
+    // Clean up any active HTTP, WebSocket, or SSE session on this tab
     httpClient.cancel(tabId);
+    websocketClient.disconnect(tabId, 'Tab closed');
+    sseClient.disconnect(tabId);
 
     const remaining = state.tabs.filter((t) => t.id !== tabId);
 
@@ -187,6 +241,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         id: fallbackTabId,
         requestId: fallbackReq.id,
         title: fallbackReq.name,
+        requestType: 'http',
         method: fallbackReq.method,
         isDirty: false,
         request: fallbackReq,
@@ -217,9 +272,17 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   },
 
   closeOtherTabs: (tabId) => {
-    set((state) => {
-      const target = state.tabs.find((t) => t.id === tabId);
-      if (!target) return state;
+    const state = get();
+    state.tabs.forEach((t) => {
+      if (t.id !== tabId) {
+        httpClient.cancel(t.id);
+        websocketClient.disconnect(t.id, 'Tab closed');
+        sseClient.disconnect(t.id);
+      }
+    });
+    set((s) => {
+      const target = s.tabs.find((t) => t.id === tabId);
+      if (!target) return s;
       return {
         tabs: [target],
         activeTabId: tabId,
@@ -228,12 +291,19 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   },
 
   closeAllTabs: () => {
+    const state = get();
+    state.tabs.forEach((t) => {
+      httpClient.cancel(t.id);
+      websocketClient.disconnect(t.id, 'Tab closed');
+      sseClient.disconnect(t.id);
+    });
     const fallbackReq = createDefaultRequest('New Request');
     const fallbackTabId = 'tab-' + Date.now();
     const fallbackTab: RequestTab = {
       id: fallbackTabId,
       requestId: fallbackReq.id,
       title: fallbackReq.name,
+      requestType: 'http',
       method: fallbackReq.method,
       isDirty: false,
       request: fallbackReq,
@@ -297,6 +367,64 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       activeTabId: tabId,
       activeResponse: tabResponse,
       isSending: isTabExecuting,
+    });
+  },
+
+  switchActiveRequestType: (protocol) => {
+    set((state) => {
+      const activeIdx = state.tabs.findIndex((t) => t.id === state.activeTabId);
+      if (activeIdx === -1) return state;
+
+      const currentTab = state.tabs[activeIdx];
+      const req = { ...currentTab.request };
+      if ((req.requestType || 'http') === protocol) return state;
+
+      // Disconnect any running transport on tab when changing type
+      httpClient.cancel(currentTab.id);
+      websocketClient.disconnect(currentTab.id, 'Protocol switched');
+      sseClient.disconnect(currentTab.id);
+
+      req.requestType = protocol;
+      if (protocol === 'graphql') {
+        req.method = 'POST';
+        if (!req.graphql) {
+          req.graphql = createDefaultGraphQLConfig(
+            req.url && req.url.includes('graphql') ? req.url : '{{base_url}}/graphql'
+          );
+        }
+        req.url = req.graphql.endpoint;
+      } else if (protocol === 'websocket') {
+        if (!req.websocket) {
+          req.websocket = createDefaultWebSocketConfig(
+            req.url && (req.url.startsWith('ws://') || req.url.startsWith('wss://'))
+              ? req.url
+              : 'wss://echo.websocket.events'
+          );
+        }
+        req.url = req.websocket.url;
+      } else if (protocol === 'sse') {
+        req.method = 'GET';
+        if (!req.sse) {
+          req.sse = createDefaultSseConfig(
+            req.url && (req.url.startsWith('http://') || req.url.startsWith('https://'))
+              ? req.url
+              : 'https://stream.wikimedia.org/v2/stream/recentchange'
+          );
+        }
+        req.url = req.sse.url;
+      }
+
+      req.updatedAt = Date.now();
+      const updatedTab: RequestTab = {
+        ...currentTab,
+        requestType: protocol,
+        method: req.method,
+        isDirty: true,
+        request: req,
+      };
+      const newTabs = [...state.tabs];
+      newTabs[activeIdx] = updatedTab;
+      return { tabs: newTabs };
     });
   },
 
@@ -415,6 +543,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       if (activeIdx === -1) return state;
 
       const currentTab = state.tabs[activeIdx];
+      persistProtocolConfigIfNeeded(currentTab.request);
 
       // Update in collectionStore if it has a collectionId
       if (currentTab.request.collectionId) {
@@ -447,6 +576,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
+    persistProtocolConfigIfNeeded(updatedReq);
     useCollectionStore.getState().addRequestToCollection(collectionId, folderId || null, updatedReq);
 
     set((s) => ({

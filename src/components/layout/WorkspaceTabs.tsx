@@ -2,17 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   X,
-  MoreVertical,
   Copy,
   FolderMinus,
   Edit2,
   AlertTriangle,
   Loader2,
+  ChevronDown,
+  Globe,
+  Hexagon,
+  PlugZap,
+  Radio,
 } from 'lucide-react';
 import { useRequestStore } from '../../stores/requestStore';
 import { useExecutionStore } from '../../stores/executionStore';
+import { useWebSocketStore } from '../../stores/websocketStore';
+import { useSseStore } from '../../stores/sseStore';
 import { MethodBadge } from '../common/MethodBadge';
 import { Modal } from '../common/Modal';
+import { RequestProtocolType } from '../../types';
 
 export const WorkspaceTabs: React.FC = () => {
   const {
@@ -44,19 +51,29 @@ export const WorkspaceTabs: React.FC = () => {
 
   const [isRenamingTabId, setIsRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [isNewProtocolMenuOpen, setIsNewProtocolMenuOpen] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const newMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close context menu on click outside
+  const wsSessions = useWebSocketStore((s) => s.sessionsByTabId);
+  const sseSessions = useSseStore((s) => s.sessionsByTabId);
+
+  // Close context menu and protocol dropdown on click outside
   useEffect(() => {
     const handleOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setContextMenu((prev) => ({ ...prev, isOpen: false }));
       }
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
+        setIsNewProtocolMenuOpen(false);
+      }
     };
-    if (contextMenu.isOpen) document.addEventListener('mousedown', handleOutside);
+    if (contextMenu.isOpen || isNewProtocolMenuOpen) {
+      document.addEventListener('mousedown', handleOutside);
+    }
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, [contextMenu.isOpen]);
+  }, [contextMenu.isOpen, isNewProtocolMenuOpen]);
 
   // Focus rename input
   useEffect(() => {
@@ -100,6 +117,12 @@ export const WorkspaceTabs: React.FC = () => {
           const isRenaming = isRenamingTabId === tab.id;
           const tabExec = useExecutionStore.getState().tabExecutions[tab.id];
           const isTabRunning = tabExec?.status === 'sending' || tabExec?.status === 'receiving';
+          const protocol = tab.requestType || tab.request.requestType || 'http';
+          const wsStatus = wsSessions[tab.id]?.status;
+          const sseStatus = sseSessions[tab.id]?.status;
+          const isLiveStream =
+            (protocol === 'websocket' && wsStatus === 'connected') ||
+            (protocol === 'sse' && sseStatus === 'connected');
 
           return (
             <div
@@ -115,7 +138,14 @@ export const WorkspaceTabs: React.FC = () => {
               {isTabRunning ? (
                 <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin shrink-0" />
               ) : (
-                <MethodBadge method={tab.method} size="sm" />
+                <MethodBadge method={tab.method} requestType={protocol} size="sm" />
+              )}
+
+              {isLiveStream && (
+                <span
+                  title="Active live connection"
+                  className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"
+                />
               )}
 
               {isRenaming ? (
@@ -168,15 +198,51 @@ export const WorkspaceTabs: React.FC = () => {
         })}
       </div>
 
-      {/* Add New Request Tab Button */}
-      <button
-        type="button"
-        onClick={() => addTab()}
-        title="Add new request tab (Ctrl+T or Ctrl+Shift+N)"
-        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 dark:hover:bg-slate-800/50 light:hover:bg-slate-200/80 transition-colors cursor-pointer shrink-0 ml-1"
-      >
-        <Plus className="w-4 h-4 text-cyan-400" />
-      </button>
+      {/* Add New Request Tab Split Button */}
+      <div className="relative flex items-center shrink-0 ml-1" ref={newMenuRef}>
+        <button
+          type="button"
+          onClick={() => addTab()}
+          title="Add new HTTP request tab (Ctrl+T or Ctrl+Shift+N)"
+          className="p-1.5 rounded-l-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 dark:hover:bg-slate-800/50 light:hover:bg-slate-200/80 transition-colors cursor-pointer"
+        >
+          <Plus className="w-4 h-4 text-cyan-400" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsNewProtocolMenuOpen((o) => !o)}
+          title="New request by protocol (HTTP, GraphQL, WebSocket, SSE)"
+          className="px-1 py-1.5 rounded-r-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 dark:hover:bg-slate-800/50 light:hover:bg-slate-200/80 transition-colors cursor-pointer"
+        >
+          <ChevronDown className="w-3 h-3" />
+        </button>
+
+        {isNewProtocolMenuOpen && (
+          <div className="fixed mt-32 ml-1 w-48 rounded-lg bg-[#12161f]/95 dark:bg-[#12161f]/95 light:bg-white/95 border border-blue-500/25 shadow-2xl py-1 z-50 text-xs text-slate-200 light:text-slate-800">
+            {(
+              [
+                { id: 'http', label: 'New HTTP Request', icon: <Globe className="w-3.5 h-3.5 text-blue-400" /> },
+                { id: 'graphql', label: 'New GraphQL Query', icon: <Hexagon className="w-3.5 h-3.5 text-fuchsia-400" /> },
+                { id: 'websocket', label: 'New WebSocket', icon: <PlugZap className="w-3.5 h-3.5 text-cyan-400" /> },
+                { id: 'sse', label: 'New SSE Stream', icon: <Radio className="w-3.5 h-3.5 text-amber-400" /> },
+              ] as Array<{ id: RequestProtocolType; label: string; icon: React.ReactNode }>
+            ).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  addTab(undefined, item.id);
+                  setIsNewProtocolMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-blue-600/20 cursor-pointer text-left"
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Tab Context Menu */}
       {contextMenu.isOpen && (

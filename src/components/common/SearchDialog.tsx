@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Folder, Send, Clock, Layers, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { Search, Folder, Clock, Layers, CornerDownLeft, GitCompare, Wrench } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useCollectionStore } from '../../stores/collectionStore';
 import { useRequestStore } from '../../stores/requestStore';
 import { useHistoryStore } from '../../stores/historyStore';
 import { useEnvironmentStore } from '../../stores/environmentStore';
 import { MethodBadge } from './MethodBadge';
-import { ApiRequest } from '../../types';
+import { ApiRequest, SidebarSection } from '../../types';
 
 interface SearchResultItem {
   id: string;
   title: string;
   subtitle: string;
-  category: 'request' | 'collection' | 'history' | 'environment';
+  category: 'request' | 'collection' | 'history' | 'environment' | 'workspace';
   method?: string;
   request?: ApiRequest;
   environmentId?: string;
+  targetView?: SidebarSection;
 }
 
 export const SearchDialog: React.FC = () => {
@@ -128,6 +129,33 @@ export const SearchDialog: React.FC = () => {
       }
     }
 
+    // 4. Phase 6 Workspaces
+    const workspaces: Array<{ id: string; title: string; subtitle: string; targetView: SidebarSection }> = [
+      {
+        id: 'ws-comparison',
+        title: 'Response Comparison',
+        subtitle: 'Diff two HTTP responses (JSON, text, and headers)',
+        targetView: 'comparison',
+      },
+      {
+        id: 'ws-devtools',
+        title: 'Developer Tools & SSL Inspector',
+        subtitle: 'JSON Formatter, JSON-to-TS, JWT, Base64, Hash, UUID, Regex, SSL',
+        targetView: 'devtools',
+      },
+    ];
+    for (const ws of workspaces) {
+      if (!q || ws.title.toLowerCase().includes(q) || ws.subtitle.toLowerCase().includes(q)) {
+        items.push({
+          id: ws.id,
+          title: ws.title,
+          subtitle: ws.subtitle,
+          category: 'workspace',
+          targetView: ws.targetView,
+        });
+      }
+    }
+
     return items.slice(0, 15);
   }, [collections, environments, history, query]);
 
@@ -138,6 +166,8 @@ export const SearchDialog: React.FC = () => {
     } else if (item.environmentId) {
       setActiveEnvironmentId(item.environmentId);
       setActiveView('environments');
+    } else if (item.targetView) {
+      setActiveView(item.targetView);
     } else if (item.category === 'collection') {
       setActiveView('collections');
     }
@@ -211,7 +241,15 @@ export const SearchDialog: React.FC = () => {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {item.method ? (
-                      <MethodBadge method={item.method as any} size="sm" />
+                      <MethodBadge
+                        method={item.method as any}
+                        requestType={item.request?.requestType}
+                        size="sm"
+                      />
+                    ) : item.targetView === 'comparison' ? (
+                      <GitCompare className="w-4 h-4 text-cyan-400 shrink-0" />
+                    ) : item.targetView === 'devtools' ? (
+                      <Wrench className="w-4 h-4 text-cyan-400 shrink-0" />
                     ) : item.category === 'collection' ? (
                       <Folder className="w-4 h-4 text-cyan-400 shrink-0" />
                     ) : item.category === 'environment' ? (

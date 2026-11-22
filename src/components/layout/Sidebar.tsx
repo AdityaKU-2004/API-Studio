@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  GitCompare,
+  Wrench,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -72,6 +74,8 @@ export const Sidebar: React.FC = () => {
     { id: 'reports', label: 'Test Reports', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'templates', label: 'Script Templates', icon: <FileCode2 className="w-4 h-4" /> },
     { id: 'schemas', label: 'JSON Schemas', icon: <FileJson className="w-4 h-4" /> },
+    { id: 'comparison', label: 'Response Comparison', icon: <GitCompare className="w-4 h-4" /> },
+    { id: 'devtools', label: 'Developer Tools', icon: <Wrench className="w-4 h-4" /> },
     { id: 'apis', label: 'APIs (Specs)', icon: <Cpu className="w-4 h-4" /> },
     { id: 'mock-servers', label: 'Mock Servers', icon: <Server className="w-4 h-4" /> },
     { id: 'monitors', label: 'Monitors', icon: <Activity className="w-4 h-4" /> },
@@ -82,7 +86,9 @@ export const Sidebar: React.FC = () => {
     activeView === 'suites' ||
     activeView === 'reports' ||
     activeView === 'templates' ||
-    activeView === 'schemas';
+    activeView === 'schemas' ||
+    activeView === 'comparison' ||
+    activeView === 'devtools';
 
   return (
     <aside className="relative flex h-full select-none shrink-0 z-20">

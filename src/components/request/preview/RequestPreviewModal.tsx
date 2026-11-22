@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Modal } from '../../common/Modal';
 import { MethodBadge } from '../../common/MethodBadge';
 import { ApiRequest } from '../../../types';
-import { buildUrlWithParams } from '../../../services/request/urlBuilder';
-import { useEnvironmentStore } from '../../../stores/environmentStore';
-import { useAuthStore } from '../../../stores/authStore';
-import { Globe, Layers, Key, FileText, Settings, Shield } from 'lucide-react';
+import { useDiagnosticsStore } from '../../../stores/diagnosticsStore';
+import { Globe, Layers, Key, FileText, AlertTriangle, Info } from 'lucide-react';
+import { formatBytes } from '../../../utils/formatBytes';
 
 interface RequestPreviewModalProps {
   isOpen: boolean;
@@ -18,104 +17,90 @@ export const RequestPreviewModal: React.FC<RequestPreviewModalProps> = ({
   onClose,
   request,
 }) => {
-  const { getResolvedVariables } = useEnvironmentStore();
-  const { resolveEffectiveAuth } = useAuthStore();
-
-  const vars = getResolvedVariables();
-
-  // Calculate resolved URL
-  let resolvedUrl = buildUrlWithParams(request.url, request.params, request.settings?.autoEncodeUrl ?? true);
-  for (const [k, v] of Object.entries(vars)) {
-    resolvedUrl = resolvedUrl.replaceAll(`{{${k}}}`, v);
-  }
-
-  // Calculate effective headers including auth
-  const enabledHeaders = [...request.headers.filter((h) => h.enabled && h.key)];
-  const effectiveAuth = resolveEffectiveAuth(request.auth, request.collectionId, request.folderId);
-
-  let generatedAuthHeader: string | null = null;
-  if (effectiveAuth.effectiveAuth.type === 'bearer' && effectiveAuth.effectiveAuth.bearer?.token) {
-    let token = effectiveAuth.effectiveAuth.bearer.token;
-    for (const [k, v] of Object.entries(vars)) {
-      token = token.replaceAll(`{{${k}}}`, v);
-    }
-    generatedAuthHeader = `${effectiveAuth.effectiveAuth.bearer.prefix || 'Bearer'} ${token}`;
-  } else if (effectiveAuth.effectiveAuth.type === 'apikey' && effectiveAuth.effectiveAuth.apikey?.enabled && effectiveAuth.effectiveAuth.apikey.addTo === 'header') {
-    let val = effectiveAuth.effectiveAuth.apikey.value;
-    for (const [k, v] of Object.entries(vars)) {
-      val = val.replaceAll(`{{${k}}}`, v);
-    }
-    generatedAuthHeader = val;
-  }
-
-  // Body preview
-  const bodySize = request.rawBody ? new Blob([request.rawBody]).size : 0;
+  const buildPreview = useDiagnosticsStore((s) => s.buildPreview);
+  const preview = useMemo(() => buildPreview(request), [buildPreview, request]);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Request Configuration Summary"
-      description="Inspect estimated request payload, headers, and resolved endpoint parameters"
+      title="Pre-Execution Request Preview"
+      description="Inspect resolved URL, parameters, masked headers, authentication, and browser header controls"
       maxWidth="3xl"
     >
-      <div className="space-y-5 text-xs text-slate-300">
-        {/* Method & URL */}
+      <div className="space-y-4 text-xs text-slate-300">
+        {/* Method & Resolved URL */}
         <div className="p-3.5 rounded-xl border border-blue-500/30 bg-blue-500/10 space-y-2">
           <div className="flex items-center gap-2">
-            <MethodBadge method={request.method} size="md" />
+            <MethodBadge method={request.method} requestType={preview.protocol} size="md" />
             <span className="font-mono text-cyan-300 text-xs font-semibold break-all">
-              {resolvedUrl}
+              {preview.resolvedUrl || '(empty URL)'}
             </span>
           </div>
-          {request.url !== resolvedUrl && (
-            <div className="text-[11px] text-slate-400 font-mono">
-              Raw Template: {request.url}
+          {preview.rawUrl !== preview.resolvedUrl && (
+            <div className="text-[11px] text-slate-400 font-mono break-all">
+              Raw Template: {preview.rawUrl}
             </div>
           )}
         </div>
+
+        {/* Unresolved variables warning */}
+        {preview.unresolvedVariables.length > 0 && (
+          <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-300 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-semibold">Unresolved Variables Detected</div>
+              <div className="text-[11px] font-mono mt-0.5">
+                {preview.unresolvedVariables.map((v) => `{{${v}}}`).join(', ')}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Query Params Breakdown */}
         <div>
           <h4 className="text-xs font-semibold text-slate-200 flex items-center gap-1.5 mb-2">
             <Globe className="w-3.5 h-3.5 text-cyan-400" />
-            Query Parameters ({request.params.filter((p) => p.enabled && p.key).length} Active)
+            Query Parameters ({preview.resolvedParams.length} Active)
           </h4>
-          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-2 font-mono text-xs max-h-36 overflow-y-auto">
-            {request.params.filter((p) => p.enabled && p.key).length === 0 ? (
+          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-2 font-mono text-xs max-h-32 overflow-y-auto">
+            {preview.resolvedParams.length === 0 ? (
               <span className="text-slate-500 font-sans">No active query parameters</span>
             ) : (
-              request.params
-                .filter((p) => p.enabled && p.key)
-                .map((p) => (
-                  <div key={p.id} className="flex justify-between py-0.5">
-                    <span className="text-slate-300">{p.key}:</span>
-                    <span className="text-cyan-300">{p.value}</span>
-                  </div>
-                ))
+              preview.resolvedParams.map((p, i) => (
+                <div key={i} className="flex justify-between py-0.5 px-1 gap-4">
+                  <span className="text-slate-300 shrink-0">{p.key}:</span>
+                  <span className="text-cyan-300 break-all text-right">{p.value}</span>
+                </div>
+              ))
             )}
           </div>
         </div>
 
-        {/* Headers Breakdown */}
+        {/* Headers Attempted (with secrets masked) */}
         <div>
           <h4 className="text-xs font-semibold text-slate-200 flex items-center gap-1.5 mb-2">
             <Layers className="w-3.5 h-3.5 text-blue-400" />
-            Outgoing Headers ({enabledHeaders.length + (generatedAuthHeader ? 1 : 0)} Active)
+            Headers Attempted ({preview.headersAttempted.length} · Sensitive Values Masked)
           </h4>
           <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-2 font-mono text-xs max-h-40 overflow-y-auto space-y-1">
-            {generatedAuthHeader && (
-              <div className="flex justify-between py-0.5 text-amber-300 bg-amber-500/10 px-2 rounded">
-                <span>Authorization (Auth Tab):</span>
-                <span className="truncate max-w-sm">{generatedAuthHeader}</span>
-              </div>
+            {preview.headersAttempted.length === 0 ? (
+              <span className="text-slate-500 font-sans">No custom headers configured</span>
+            ) : (
+              preview.headersAttempted.map((h, i) => (
+                <div
+                  key={i}
+                  className={`flex justify-between py-0.5 px-2 rounded gap-4 ${
+                    h.masked ? 'bg-amber-500/10 text-amber-300' : ''
+                  }`}
+                >
+                  <span className="text-slate-300 shrink-0">
+                    {h.key} <span className="text-[10px] text-slate-500">({h.source})</span>
+                  </span>
+                  <span className="text-cyan-300 truncate max-w-sm">{h.value}</span>
+                </div>
+              ))
             )}
-            {enabledHeaders.map((h) => (
-              <div key={h.id} className="flex justify-between py-0.5 px-2">
-                <span className="text-slate-300">{h.key}:</span>
-                <span className="text-cyan-300 truncate max-w-sm">{h.value}</span>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -124,12 +109,15 @@ export const RequestPreviewModal: React.FC<RequestPreviewModalProps> = ({
           <div className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 space-y-1">
             <div className="flex items-center gap-1.5 font-semibold text-slate-200">
               <Key className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Authentication</span>
+              <span>Authentication (Masked)</span>
             </div>
             <div className="text-[11px] text-slate-400">
-              Scheme: <span className="text-cyan-300 font-mono uppercase">{effectiveAuth.effectiveAuth.type}</span>
+              Scheme:{' '}
+              <span className="text-cyan-300 font-mono uppercase">{preview.authSummary.type}</span>
             </div>
-            <div className="text-[11px] text-slate-500">Source: {effectiveAuth.sourceName}</div>
+            <div className="text-[11px] text-slate-400 font-mono truncate">
+              {preview.authSummary.maskedSummary}
+            </div>
           </div>
 
           <div className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 space-y-1">
@@ -138,12 +126,27 @@ export const RequestPreviewModal: React.FC<RequestPreviewModalProps> = ({
               <span>Body Payload</span>
             </div>
             <div className="text-[11px] text-slate-400">
-              Mode: <span className="text-cyan-300 font-mono uppercase">{request.bodyType || 'none'}</span>
+              Mode: <span className="text-cyan-300 font-mono uppercase">{preview.bodyMode}</span>
             </div>
-            <div className="text-[11px] text-slate-500">
-              Estimated Size: {(bodySize / 1024).toFixed(2)} KB ({bodySize} bytes)
+            <div className="text-[11px] text-slate-500 font-mono tabular-nums">
+              Estimated Size: {formatBytes(preview.estimatedBodySizeBytes)} (
+              {preview.estimatedBodySizeBytes} bytes)
             </div>
           </div>
+        </div>
+
+        {/* Browser-controlled forbidden headers notice */}
+        <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+          <div className="flex items-center gap-1.5 font-medium text-slate-300">
+            <Info className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Browser-Controlled Forbidden Headers (Fetch Spec)</span>
+          </div>
+          <p className="text-slate-400">
+            Browsers ignore or override user-supplied values for:{' '}
+            <span className="font-mono text-slate-300">
+              {preview.browserControlledHeaders.join(', ')}
+            </span>
+          </p>
         </div>
       </div>
     </Modal>

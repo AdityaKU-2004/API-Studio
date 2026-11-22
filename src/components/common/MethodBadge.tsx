@@ -1,8 +1,9 @@
 import React from 'react';
-import { HttpMethod } from '../../types';
+import { HttpMethod, RequestProtocolType } from '../../types';
 
 interface MethodBadgeProps {
   method: HttpMethod;
+  requestType?: RequestProtocolType;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -45,14 +46,54 @@ const methodStyles: Record<HttpMethod, { text: string; bg: string; border: strin
   },
 };
 
-export const MethodBadge: React.FC<MethodBadgeProps> = ({ method, size = 'sm', className = '' }) => {
-  const style = methodStyles[method] || methodStyles.GET;
+const protocolStyles: Record<
+  Exclude<RequestProtocolType, 'http'>,
+  { label: string; text: string; bg: string; border: string }
+> = {
+  graphql: {
+    label: 'GQL',
+    text: 'text-fuchsia-400 dark:text-fuchsia-400 light:text-fuchsia-700',
+    bg: 'bg-fuchsia-500/15 dark:bg-fuchsia-500/15 light:bg-fuchsia-50',
+    border: 'border-fuchsia-500/30 dark:border-fuchsia-500/30 light:border-fuchsia-300',
+  },
+  websocket: {
+    label: 'WS',
+    text: 'text-cyan-400 dark:text-cyan-400 light:text-cyan-700',
+    bg: 'bg-cyan-500/15 dark:bg-cyan-500/15 light:bg-cyan-50',
+    border: 'border-cyan-500/30 dark:border-cyan-500/30 light:border-cyan-300',
+  },
+  sse: {
+    label: 'SSE',
+    text: 'text-amber-400 dark:text-amber-400 light:text-amber-700',
+    bg: 'bg-amber-500/15 dark:bg-amber-500/15 light:bg-amber-50',
+    border: 'border-amber-500/30 dark:border-amber-500/30 light:border-amber-300',
+  },
+};
 
+export const MethodBadge: React.FC<MethodBadgeProps> = ({
+  method,
+  requestType = 'http',
+  size = 'sm',
+  className = '',
+}) => {
   const sizeClasses = {
     sm: 'text-[10px] px-1.5 py-0.5 tracking-wider',
     md: 'text-xs px-2 py-0.5 tracking-wider',
     lg: 'text-sm px-3 py-1 tracking-wider',
   }[size];
+
+  if (requestType && requestType !== 'http') {
+    const pStyle = protocolStyles[requestType];
+    return (
+      <span
+        className={`font-mono font-semibold rounded border inline-flex items-center justify-center shrink-0 uppercase select-none ${pStyle.text} ${pStyle.bg} ${pStyle.border} ${sizeClasses} ${className}`}
+      >
+        {pStyle.label}
+      </span>
+    );
+  }
+
+  const style = methodStyles[method] || methodStyles.GET;
 
   return (
     <span

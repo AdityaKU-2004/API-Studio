@@ -2,11 +2,19 @@ import React, { useState, useRef, useCallback } from 'react';
 import { RequestBuilder } from '../request/RequestBuilder';
 import { ResponsePanel } from '../response/ResponsePanel';
 import { useUiStore } from '../../stores/uiStore';
+import { useRequestStore } from '../../stores/requestStore';
+import { GraphQLWorkspace } from '../../features/graphql/GraphQLWorkspace';
+import { WebSocketWorkspace } from '../../features/websocket/WebSocketWorkspace';
+import { SseWorkspace } from '../../features/sse/SseWorkspace';
 
 export const WorkspaceSplit: React.FC = () => {
   const { splitRatio, setSplitRatio } = useUiStore();
+  const { tabs, activeTabId } = useRequestStore();
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activeProtocol = activeTab?.requestType || activeTab?.request?.requestType || 'http';
 
   const startDragging = useCallback(
     (e: React.MouseEvent) => {
@@ -32,6 +40,18 @@ export const WorkspaceSplit: React.FC = () => {
     },
     [setSplitRatio]
   );
+
+  if (activeProtocol === 'graphql') {
+    return <GraphQLWorkspace />;
+  }
+
+  if (activeProtocol === 'websocket') {
+    return <WebSocketWorkspace />;
+  }
+
+  if (activeProtocol === 'sse') {
+    return <SseWorkspace />;
+  }
 
   return (
     <div ref={containerRef} className="flex-1 flex flex-col h-full overflow-hidden relative">

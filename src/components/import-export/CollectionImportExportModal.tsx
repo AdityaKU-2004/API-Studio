@@ -357,6 +357,17 @@ export const CollectionImportExportModal: React.FC = () => {
                     </div>
                   </div>
 
+                  {parsedImport.warnings && parsedImport.warnings.length > 0 && (
+                    <div className="p-2.5 rounded bg-amber-950/30 border border-amber-500/30 text-amber-300 text-[11px] space-y-1">
+                      {parsedImport.warnings.map((warn, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <AlertCircle className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />
+                          <span>{warn}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {parsedImport.errors.length > 0 && (
                     <div className="p-2.5 rounded bg-red-950/30 border border-red-500/30 text-red-300 text-[11px] space-y-1">
                       {parsedImport.errors.map((err, i) => (

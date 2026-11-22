@@ -8,6 +8,7 @@ export interface RequestTiming {
   prepareMs: number; // time spent resolving variables and building payload
   waitingMs: number; // TTFB (Time to First Byte / server wait)
   downloadMs: number; // time spent reading the response stream
+  parsingMs?: number; // time spent decoding/parsing response body
 }
 
 export type NetworkErrorType =

@@ -187,6 +187,44 @@ export async function runMigrationsAndSeed(dbInstance: ApiStudioDatabase): Promi
     if (schemaCount === 0) {
       await dbInstance.jsonSchemas.bulkPut(SAMPLE_SCHEMAS);
     }
+
+    // Non-destructive v3 seed: WebSocket templates & developer tool preferences
+    const wsTemplateCount = await dbInstance.wsMessageTemplates.count();
+    if (wsTemplateCount === 0) {
+      await dbInstance.wsMessageTemplates.bulkPut([
+        {
+          id: 'ws-tpl-ping',
+          name: 'JSON Heartbeat Ping',
+          format: 'json',
+          payload: JSON.stringify({ type: 'ping', timestamp: '{{$timestamp}}' }, null, 2),
+          description: 'Application-level JSON ping payload',
+          createdAt: 1710000000000,
+          updatedAt: 1710000000000,
+        },
+        {
+          id: 'ws-tpl-subscribe',
+          name: 'Subscribe Channel',
+          format: 'json',
+          payload: JSON.stringify({ action: 'subscribe', channel: 'ticker', symbol: 'BTC-USD' }, null, 2),
+          description: 'Channel subscription message template',
+          createdAt: 1710000000000,
+          updatedAt: 1710000000000,
+        },
+      ]);
+    }
+
+    const devPrefsCount = await dbInstance.developerToolPreferences.count();
+    if (devPrefsCount === 0) {
+      await dbInstance.developerToolPreferences.put({
+        id: 'default_dev_prefs',
+        lastActiveTool: 'json-formatter',
+        jsonIndentSpaces: 2,
+        tsRootInterfaceName: 'Root',
+        uuidDefaultCount: 5,
+        favoriteTools: ['json-formatter', 'jwt-decoder', 'json-to-ts'],
+        updatedAt: Date.now(),
+      });
+    }
   } catch {
     // ignore if called on an old mock instance
   }

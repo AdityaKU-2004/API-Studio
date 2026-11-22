@@ -20,11 +20,13 @@ export interface TabExecutionState {
 }
 
 export type ConsoleLogLevel = 'info' | 'warn' | 'error' | 'success';
+export type ConsoleLogCategory = 'http' | 'graphql' | 'websocket' | 'sse' | 'script' | 'system';
 
 export interface ConsoleLogEntry {
   id: string;
   timestamp: number;
   level: ConsoleLogLevel;
+  category?: ConsoleLogCategory;
   tabId?: string;
   requestId?: string;
   method?: string;

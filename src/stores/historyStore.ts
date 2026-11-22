@@ -51,6 +51,29 @@ function sanitizeRequestForHistory(req: ApiRequest): ApiRequest {
     });
   }
 
+  // Scrub SSE auth & headers
+  if (sanitized.sse) {
+    if (sanitized.sse.auth) {
+      if (sanitized.sse.auth.type === 'bearer' && sanitized.sse.auth.bearer) {
+        sanitized.sse.auth.bearer.token = '';
+      } else if (sanitized.sse.auth.type === 'basic' && sanitized.sse.auth.basic) {
+        sanitized.sse.auth.basic.password = '';
+      } else if (sanitized.sse.auth.type === 'apikey') {
+        const apiKey = sanitized.sse.auth.apikey || sanitized.sse.auth.apiKey;
+        if (apiKey) apiKey.value = '••••••••';
+      }
+    }
+    if (sanitized.sse.headers) {
+      sanitized.sse.headers = sanitized.sse.headers.map((h) => {
+        const lower = h.key.toLowerCase();
+        if (lower.includes('auth') || lower.includes('token') || lower.includes('secret')) {
+          return { ...h, value: '••••••••' };
+        }
+        return h;
+      });
+    }
+  }
+
   // Strip binary bodies
   if (sanitized.body?.binary) {
     sanitized.body.binary = {
@@ -131,6 +154,14 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
         // 2. Method Filter
         if (filters.method !== 'ALL' && item.method !== filters.method) {
           return false;
+        }
+
+        // 2b. Protocol Filter
+        if (filters.requestType && filters.requestType !== 'ALL') {
+          const itemType = item.requestType || item.request?.requestType || 'http';
+          if (itemType !== filters.requestType) {
+            return false;
+          }
         }
 
         // 3. Status Code Category Filter

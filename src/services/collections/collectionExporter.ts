@@ -46,12 +46,15 @@ export class CollectionExporter {
           if (reqCopy.auth?.bearer) reqCopy.auth.bearer.token = '';
           if (reqCopy.auth?.basic) reqCopy.auth.basic.password = '';
           if (reqCopy.auth?.apiKey) reqCopy.auth.apiKey.value = '';
+          if (reqCopy.auth?.apikey) reqCopy.auth.apikey.value = '';
+          if (reqCopy.sse?.auth?.bearer) reqCopy.sse.auth.bearer.token = '';
+          if (reqCopy.sse?.auth?.basic) reqCopy.sse.auth.basic.password = '';
           return reqCopy;
         });
 
     return {
       format: 'api-studio-collection',
-      version: '1.0',
+      version: '1.1',
       exportedAt: new Date().toISOString(),
       collection: sanitizedCol,
       folders,
@@ -60,7 +63,8 @@ export class CollectionExporter {
   }
 
   /**
-   * Exports a collection into Postman Collection v2.1 compatible format.
+   * Exports a collection into Postman Collection v2.1 compatible format,
+   * preserving non-REST protocol configs in `_api_studio` extension metadata.
    */
   async exportPostmanV21(collectionId: string, options: ExportOptions = {}): Promise<any> {
     const col = await this.colRepo.getById(collectionId);
@@ -85,6 +89,7 @@ export class CollectionExporter {
 
     // Convert ApiRequest to Postman Item
     const convertRequestToPostmanItem = (req: ApiRequest) => {
+      const protocol = req.requestType || 'http';
       const headers = (req.headers || [])
         .filter((h) => h.enabled && h.key.trim())
         .map((h) => ({
@@ -93,40 +98,74 @@ export class CollectionExporter {
           description: h.description,
         }));
 
-      // Postman body
       let postmanBody: any = undefined;
-      const mode = req.body?.mode || 'none';
-      if (mode === 'json') {
+      if (protocol === 'graphql' && req.graphql) {
         postmanBody = {
-          mode: 'raw',
-          raw: req.body?.rawContent?.json || req.rawBody || '',
-          options: { raw: { language: 'json' } },
+          mode: 'graphql',
+          graphql: {
+            query: req.graphql.query,
+            variables: req.graphql.variablesText,
+          },
         };
-      } else if (mode === 'text' || mode === 'xml' || mode === 'html') {
-        postmanBody = {
-          mode: 'raw',
-          raw: req.body?.rawContent?.[mode] || req.rawBody || '',
-          options: { raw: { language: mode } },
-        };
-      } else if (mode === 'x-www-form-urlencoded') {
-        postmanBody = {
-          mode: 'urlencoded',
-          urlencoded: (req.body?.urlEncoded || []).map((u) => ({
-            key: u.key,
-            value: u.value,
-            description: u.description,
-          })),
-        };
+      } else {
+        const mode = req.body?.mode || 'none';
+        if (mode === 'json') {
+          postmanBody = {
+            mode: 'raw',
+            raw: req.body?.rawContent?.json || req.rawBody || '',
+            options: { raw: { language: 'json' } },
+          };
+        } else if (mode === 'text' || mode === 'xml' || mode === 'html') {
+          postmanBody = {
+            mode: 'raw',
+            raw: req.body?.rawContent?.[mode] || req.rawBody || '',
+            options: { raw: { language: mode } },
+          };
+        } else if (mode === 'x-www-form-urlencoded') {
+          postmanBody = {
+            mode: 'urlencoded',
+            urlencoded: (req.body?.urlEncoded || []).map((u) => ({
+              key: u.key,
+              value: u.value,
+              description: u.description,
+            })),
+          };
+        }
       }
+
+      const rawUrl =
+        protocol === 'graphql'
+          ? req.graphql?.endpoint || req.url
+          : protocol === 'websocket'
+          ? req.websocket?.url || req.url
+          : protocol === 'sse'
+          ? req.sse?.url || req.url
+          : req.url;
+
+      const extensionMeta =
+        protocol !== 'http'
+          ? {
+              requestType: protocol,
+              graphql: protocol === 'graphql' ? req.graphql : undefined,
+              websocket: protocol === 'websocket' ? req.websocket : undefined,
+              sse:
+                protocol === 'sse' && req.sse
+                  ? {
+                      ...req.sse,
+                      auth: options.includeSecrets ? req.sse.auth : { type: 'none' },
+                    }
+                  : undefined,
+            }
+          : undefined;
 
       return {
         name: req.name,
         request: {
-          method: req.method,
+          method: protocol === 'graphql' ? req.graphql?.method || 'POST' : req.method,
           header: headers,
           body: postmanBody,
           url: {
-            raw: req.url,
+            raw: rawUrl,
             query: (req.params || [])
               .filter((p) => p.enabled && p.key.trim())
               .map((p) => ({
@@ -136,6 +175,7 @@ export class CollectionExporter {
               })),
           },
         },
+        ...(extensionMeta ? { _api_studio: extensionMeta } : {}),
       };
     };
 

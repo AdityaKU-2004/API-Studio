@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { ApiResponse, ConsoleLogEntry, TabExecutionState, ExecutionStatus } from '../types';
 import { httpClient } from '../services/http/httpClient';
 
+const scrubSecretTokens = (text?: string): string | undefined => {
+  if (!text) return text;
+  return text
+    .replace(/(Bearer\s+)[A-Za-z0-9\-._~+/]+=*/gi, '$1••••••')
+    .replace(/(Basic\s+)[A-Za-z0-9+/=]+/gi, '$1••••••')
+    .replace(/(api[-_]?key|token|secret|password)\s*[:=]\s*([^\s,;]+)/gi, '$1: ••••••');
+};
+
 interface ExecutionState {
   tabExecutions: Record<string, TabExecutionState>;
   tabResponses: Record<string, ApiResponse | null>;
@@ -24,6 +32,7 @@ interface ExecutionState {
   // Console actions
   addLog: (log: Omit<ConsoleLogEntry, 'id' | 'timestamp'>) => void;
   clearLogs: () => void;
+  exportLogs: (format?: 'json' | 'text') => string;
   toggleConsole: () => void;
   setConsoleOpen: (open: boolean) => void;
 }
@@ -147,17 +156,34 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   addLog: (log) => {
     const entry: ConsoleLogEntry = {
       ...log,
+      category: log.category || 'http',
+      message: scrubSecretTokens(log.message) || log.message,
+      details: scrubSecretTokens(log.details),
       id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: Date.now(),
     };
 
     set((state) => ({
-      // Keep up to 200 console logs
-      logs: [entry, ...state.logs].slice(0, 200),
+      // Keep up to 300 console logs
+      logs: [entry, ...state.logs].slice(0, 300),
     }));
   },
 
   clearLogs: () => set({ logs: [] }),
+  exportLogs: (format = 'json') => {
+    const logs = get().logs;
+    if (format === 'text') {
+      return logs
+        .map(
+          (l) =>
+            `[${new Date(l.timestamp).toISOString()}] [${(l.category || 'http').toUpperCase()}] [${l.level.toUpperCase()}] ${l.title}: ${l.message}${
+              l.durationMs !== undefined ? ` (${l.durationMs}ms)` : ''
+            }`
+        )
+        .join('\n');
+    }
+    return JSON.stringify(logs, null, 2);
+  },
   toggleConsole: () => set((s) => ({ isConsoleOpen: !s.isConsoleOpen })),
   setConsoleOpen: (open) => set({ isConsoleOpen: open }),
 }));

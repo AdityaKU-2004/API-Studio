@@ -64,6 +64,16 @@ export function normalizeResponse(
   const headers = extractHeaders(fetchResponse.headers);
   const cookies = extractAccessibleCookies(finalUrl);
 
+  // Measure byte size of exposed response headers (note: browser CORS restricts some headers)
+  const serializedExposedHeaders = Object.entries(headers)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\r\n');
+  const headerSizeBytes = serializedExposedHeaders
+    ? new TextEncoder().encode(serializedExposedHeaders).byteLength
+    : 0;
+  const contentEncoding =
+    headers['content-encoding'] || headers['Content-Encoding'] || undefined;
+
   return {
     id: executionId,
     requestId,
@@ -80,6 +90,9 @@ export function normalizeResponse(
     contentTypeCategory: parsedBody.category,
     size: parsedBody.sizeBytes,
     sizeBytes: parsedBody.sizeBytes,
+    headerSizeBytes,
+    headerSizeEstimated: true,
+    contentEncoding,
     timeMs: timing.duration,
     timing,
     receivedAt: new Date(timing.endTime).toISOString(),
