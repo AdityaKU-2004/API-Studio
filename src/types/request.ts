@@ -50,6 +50,20 @@ export interface RequestSettings {
   disableCache: boolean;
   followAuthRedirects: boolean;
   customUserAgent: string;
+  // Phase 7 Native Desktop overrides
+  proxy?: {
+    enabled: boolean;
+    protocol: 'http' | 'https' | 'socks5';
+    host: string;
+    port: number;
+    username?: string;
+    password?: string;
+    credentialRef?: string;
+    bypassList: string[];
+  };
+  customCaPem?: string;
+  clientCertPem?: string;
+  clientKeyPem?: string;
 }
 
 export interface RequestDefinition {

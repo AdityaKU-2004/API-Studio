@@ -78,4 +78,8 @@ export interface ApiResponse {
   headerSizeBytes?: number;
   headerSizeEstimated?: boolean;
   contentEncoding?: string;
+  tlsVerified?: boolean;
+  tlsWarning?: string | null;
+  effectiveProxy?: string | null;
+  runtimeMode?: 'browser' | 'desktop-tauri';
 }

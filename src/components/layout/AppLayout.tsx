@@ -21,6 +21,7 @@ import { CollectionSettingsModal } from '../collections/CollectionSettingsModal'
 import { CollectionRunnerModal } from '../collections/CollectionRunnerModal';
 import { CollectionImportExportModal } from '../import-export/CollectionImportExportModal';
 import { BackupRestoreModal } from '../backup/BackupRestoreModal';
+import { SqliteMigrationModal } from '../migration/SqliteMigrationModal';
 import { GlobalVariablesModal } from '../environments/GlobalVariablesModal';
 import { EnvironmentModal } from '../environments/EnvironmentModal';
 import { ExecutionConsole } from '../console/ExecutionConsole';
@@ -38,14 +39,15 @@ import { useReportStore } from '../../stores/reportStore';
 import { useComparisonStore } from '../../stores/comparisonStore';
 import { useDeveloperToolsStore } from '../../stores/developerToolsStore';
 import { useWebSocketStore } from '../../stores/websocketStore';
+import { useDesktopStore } from '../../stores/desktopStore';
 import { storageService } from '../../services/storage/storageService';
 
 export const AppLayout: React.FC = () => {
   const { sendRequest, saveActiveRequest, addTab, closeTab, activeTabId } = useRequestStore();
   const { theme } = useUiStore();
-  const { activeView } = useAppStore();
+  const { activeView, setSettingsOpen, setCommandPaletteOpen } = useAppStore();
 
-  // Initialize IndexedDB storage and hydrate all persistent stores on boot
+  // Initialize IndexedDB storage, desktop Tauri capabilities, and hydrate stores on boot
   useEffect(() => {
     const bootstrapStorage = async () => {
       await storageService.init();
@@ -61,40 +63,67 @@ export const AppLayout: React.FC = () => {
         useComparisonStore.getState().loadSavedSessions(),
         useDeveloperToolsStore.getState().loadPreferences(),
         useWebSocketStore.getState().loadTemplates(),
+        useDesktopStore.getState().initializeDesktopRuntime(),
       ]);
     };
     bootstrapStorage();
   }, []);
 
-  // Global keyboard shortcuts
+  // Global & desktop keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+
+      const keyLower = e.key.toLowerCase();
+
+      if (e.key === 'Enter') {
         e.preventDefault();
         sendRequest();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      } else if (e.shiftKey && keyLower === 's') {
         e.preventDefault();
         saveActiveRequest();
-      }
-      if (
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'n') ||
-        ((e.ctrlKey || e.metaKey) &&
-          e.key.toLowerCase() === 't' &&
+      } else if (keyLower === 's') {
+        e.preventDefault();
+        saveActiveRequest();
+      } else if (
+        (e.shiftKey && keyLower === 'n') ||
+        keyLower === 'n' ||
+        (keyLower === 't' &&
           !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement))
       ) {
         e.preventDefault();
         addTab();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+      } else if (keyLower === 'w') {
         e.preventDefault();
         if (activeTabId) closeTab(activeTabId);
+      } else if (keyLower === 'l') {
+        e.preventDefault();
+        const urlInput = document.querySelector<HTMLInputElement>(
+          'input[placeholder*="URL"], input[placeholder*="https://"]'
+        );
+        urlInput?.focus();
+        urlInput?.select();
+      } else if (e.shiftKey && keyLower === 'p') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      } else if (e.key === ',') {
+        e.preventDefault();
+        setSettingsOpen(true);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sendRequest, saveActiveRequest, addTab, closeTab, activeTabId]);
+  }, [
+    sendRequest,
+    saveActiveRequest,
+    addTab,
+    closeTab,
+    activeTabId,
+    setSettingsOpen,
+    setCommandPaletteOpen,
+  ]);
 
   const renderMainContent = () => {
     if (activeView === 'runner') return <CollectionRunner />;
@@ -147,6 +176,7 @@ export const AppLayout: React.FC = () => {
       <CollectionRunnerModal />
       <CollectionImportExportModal />
       <BackupRestoreModal />
+      <SqliteMigrationModal />
       <GlobalVariablesModal />
       <EnvironmentModal />
       <ExecutionConsole />

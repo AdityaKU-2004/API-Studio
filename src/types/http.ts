@@ -6,9 +6,14 @@ export interface RequestTiming {
   endTime: number;
   duration: number; // total round-trip duration in ms
   prepareMs: number; // time spent resolving variables and building payload
+  dnsLookupMs?: number | null;
+  tcpConnectMs?: number | null;
+  tlsHandshakeMs?: number | null;
   waitingMs: number; // TTFB (Time to First Byte / server wait)
   downloadMs: number; // time spent reading the response stream
   parsingMs?: number; // time spent decoding/parsing response body
+  socketReused?: boolean;
+  effectiveProxy?: string | null;
 }
 
 export type NetworkErrorType =

@@ -8,7 +8,7 @@ import {
   WebSocketMessageTemplate,
   WebSocketSessionState,
 } from '../types';
-import { websocketClient } from '../services/protocols/websocket/websocketClient';
+import { getWebSocketTransport } from '../services/runtime/transportFactory';
 import { createDefaultWebSocketConfig } from '../services/request/protocolRequestFactory';
 import { protocolConfigRepository } from '../repositories/protocolConfigRepository';
 import { useEnvironmentStore } from './environmentStore';
@@ -136,7 +136,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       };
     });
 
-    websocketClient.connect(tabId, cfg, resolvedVars, {
+    getWebSocketTransport().connect(tabId, cfg, resolvedVars, {
       onStatusChange: (status: WebSocketConnectionStatus, reconnectAttempt = 0) => {
         set((s) => {
           const prev = s.sessionsByTabId[tabId] || createEmptySession(tabId);
@@ -275,7 +275,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   disconnect: (tabId, request) => {
     const session = get().sessionsByTabId[tabId];
-    websocketClient.disconnect(tabId, 'Closed by user');
+    getWebSocketTransport().disconnect(tabId, 'Closed by user');
 
     useExecutionStore.getState().addLog({
       level: 'info',
@@ -315,7 +315,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   sendMessage: (tabId, payload, format, config, binaryBytes) => {
     const dataToSend = format === 'binary' && binaryBytes ? binaryBytes : payload;
-    const sent = websocketClient.send(tabId, dataToSend);
+    const sent = getWebSocketTransport().send(tabId, dataToSend);
     const sizeBytes =
       format === 'binary' && binaryBytes
         ? binaryBytes.byteLength

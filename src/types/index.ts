@@ -17,6 +17,7 @@ export * from './protocols';
 export * from './comparison';
 export * from './developerTools';
 export * from './diagnostics';
+export * from './desktop';
 
 export interface Workspace {
   id: string;

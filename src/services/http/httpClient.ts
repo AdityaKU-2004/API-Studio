@@ -1,10 +1,10 @@
 import { ApiRequest, ApiResponse, RequestExecutionOptions } from '../../types';
-import { requestExecutor } from './requestExecutor';
+import { getHttpTransport } from '../runtime/transportFactory';
 
 /**
  * Standardized HTTP execution contract.
- * In Phase 3, this uses the browser Fetch API.
- * In Phase 7, this can be seamlessly swapped for a Tauri / Rust native HTTP client.
+ * Routes automatically to Browser Fetch API in browser mode and
+ * native Tauri/Rust reqwest engine in desktop mode.
  */
 export interface HttpExecutionService {
   execute(request: ApiRequest, options?: RequestExecutionOptions): Promise<ApiResponse>;
@@ -12,18 +12,18 @@ export interface HttpExecutionService {
   isExecuting(tabId: string): boolean;
 }
 
-class BrowserFetchHttpClient implements HttpExecutionService {
+class RuntimeAwareHttpClient implements HttpExecutionService {
   public execute(request: ApiRequest, options?: RequestExecutionOptions): Promise<ApiResponse> {
-    return requestExecutor.execute(request, options);
+    return getHttpTransport().execute(request, options);
   }
 
   public cancel(tabId: string): void {
-    requestExecutor.cancel(tabId);
+    getHttpTransport().cancel(tabId);
   }
 
   public isExecuting(tabId: string): boolean {
-    return requestExecutor.isExecuting(tabId);
+    return getHttpTransport().isExecuting(tabId);
   }
 }
 
-export const httpClient: HttpExecutionService = new BrowserFetchHttpClient();
+export const httpClient: HttpExecutionService = new RuntimeAwareHttpClient();

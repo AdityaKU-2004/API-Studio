@@ -2,8 +2,7 @@ import { create } from 'zustand';
 import { ApiRequest, ApiResponse, HttpMethod, RequestProtocolType, RequestTab } from '../types';
 import { sampleRequests } from '../data/mockData';
 import { httpClient } from '../services/http/httpClient';
-import { websocketClient } from '../services/protocols/websocket/websocketClient';
-import { sseClient } from '../services/protocols/sse/sseClient';
+import { getWebSocketTransport, getSseTransport } from '../services/runtime/transportFactory';
 import {
   createDefaultGraphQLConfig,
   createDefaultSseConfig,
@@ -229,8 +228,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
 
     // Clean up any active HTTP, WebSocket, or SSE session on this tab
     httpClient.cancel(tabId);
-    websocketClient.disconnect(tabId, 'Tab closed');
-    sseClient.disconnect(tabId);
+    getWebSocketTransport().disconnect(tabId, 'Tab closed');
+    getSseTransport().disconnect(tabId);
 
     const remaining = state.tabs.filter((t) => t.id !== tabId);
 
@@ -276,8 +275,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     state.tabs.forEach((t) => {
       if (t.id !== tabId) {
         httpClient.cancel(t.id);
-        websocketClient.disconnect(t.id, 'Tab closed');
-        sseClient.disconnect(t.id);
+        getWebSocketTransport().disconnect(t.id, 'Tab closed');
+        getSseTransport().disconnect(t.id);
       }
     });
     set((s) => {
@@ -294,8 +293,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     const state = get();
     state.tabs.forEach((t) => {
       httpClient.cancel(t.id);
-      websocketClient.disconnect(t.id, 'Tab closed');
-      sseClient.disconnect(t.id);
+      getWebSocketTransport().disconnect(t.id, 'Tab closed');
+      getSseTransport().disconnect(t.id);
     });
     const fallbackReq = createDefaultRequest('New Request');
     const fallbackTabId = 'tab-' + Date.now();
@@ -381,8 +380,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
 
       // Disconnect any running transport on tab when changing type
       httpClient.cancel(currentTab.id);
-      websocketClient.disconnect(currentTab.id, 'Protocol switched');
-      sseClient.disconnect(currentTab.id);
+      getWebSocketTransport().disconnect(currentTab.id, 'Protocol switched');
+      getSseTransport().disconnect(currentTab.id);
 
       req.requestType = protocol;
       if (protocol === 'graphql') {

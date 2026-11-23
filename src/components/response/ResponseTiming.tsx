@@ -1,5 +1,14 @@
 import React from 'react';
-import { Clock, Info, Activity, ArrowDownToLine, Zap, HardDrive } from 'lucide-react';
+import {
+  Clock,
+  Info,
+  Activity,
+  ArrowDownToLine,
+  Zap,
+  HardDrive,
+  ShieldAlert,
+  Globe,
+} from 'lucide-react';
 import { ApiResponse, RequestTiming } from '../../types';
 import { formatDuration } from '../../utils/formatDuration';
 import { formatBytes } from '../../utils/formatBytes';
@@ -13,13 +22,21 @@ interface ResponseTimingProps {
 export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response }) => {
   const total = Math.max(1, timing.duration);
   const sizeBreakdown = response ? analyzeResponseSize(response) : null;
+  const isNativeDesktop = response?.runtimeMode === 'desktop-tauri';
 
   // Percentages for waterfall bar
   const prepPct = Math.max(2, Math.round((timing.prepareMs / total) * 100));
   const waitPct = Math.max(5, Math.round((timing.waitingMs / total) * 100));
   const downPct = Math.max(2, Math.round((timing.downloadMs / total) * 100));
 
-  const stages = [
+  const stages: Array<{
+    name: string;
+    description: string;
+    duration: number | null | undefined;
+    color: string;
+    textColor: string;
+    Icon: React.FC<{ className?: string }>;
+  }> = [
     {
       name: 'Request Preparation',
       description: 'Variable substitution, URL parsing, and header/body payload assembly',
@@ -28,9 +45,39 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
       textColor: 'text-indigo-400',
       Icon: Zap,
     },
+    ...(isNativeDesktop || timing.dnsLookupMs !== undefined
+      ? [
+          {
+            name: 'DNS Resolution',
+            description: 'Native resolver lookup duration (unavailable when proxied)',
+            duration: timing.dnsLookupMs,
+            color: 'bg-violet-500',
+            textColor: 'text-violet-400',
+            Icon: Globe,
+          },
+          {
+            name: 'TCP Connect',
+            description: 'Socket connect duration (unavailable on pooled HTTP clients)',
+            duration: timing.tcpConnectMs,
+            color: 'bg-sky-500',
+            textColor: 'text-sky-400',
+            Icon: Activity,
+          },
+          {
+            name: 'TLS Handshake',
+            description: 'Cryptographic negotiation duration (unavailable on pooled HTTP clients)',
+            duration: timing.tlsHandshakeMs,
+            color: 'bg-amber-500',
+            textColor: 'text-amber-400',
+            Icon: Activity,
+          },
+        ]
+      : []),
     {
       name: 'Network Latency & Server Processing (TTFB)',
-      description: 'Client-measured wait until response headers arrive (includes DNS/TCP/TLS in browser)',
+      description: isNativeDesktop
+        ? 'Native client wait from request dispatch until response headers arrive'
+        : 'Client-measured wait until response headers arrive (includes DNS/TCP/TLS in browser)',
       duration: timing.waitingMs,
       color: 'bg-cyan-500',
       textColor: 'text-cyan-400',
@@ -48,6 +95,16 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6 select-text">
+      {response?.tlsWarning && (
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200">
+          <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-amber-100">Insecure TLS Warning</div>
+            <p className="text-[11px] text-amber-300 mt-0.5">{response.tlsWarning}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header Stat */}
       <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800">
         <div className="flex items-center gap-3">
@@ -59,6 +116,11 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
             <div className="text-xl font-bold font-mono tabular-nums text-cyan-300">
               {formatDuration(timing.duration)}
             </div>
+            {(response?.effectiveProxy || timing.effectiveProxy) && (
+              <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                Proxy: {response?.effectiveProxy || timing.effectiveProxy}
+              </div>
+            )}
           </div>
         </div>
         <div className="text-right text-xs text-slate-400 font-mono tabular-nums">
@@ -95,13 +157,19 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
 
             <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
               <div className="text-[10px] text-slate-500">
-                Headers ({Object.keys(response?.headers || {}).length}, {sizeBreakdown.headersMeasurement})
+                Headers ({Object.keys(response?.headers || {}).length},{' '}
+                {isNativeDesktop ? 'Measured' : sizeBreakdown.headersMeasurement})
               </div>
               <div className="font-mono font-semibold text-slate-200 tabular-nums mt-0.5">
-                ~{formatBytes(sizeBreakdown.exposedHeadersBytes)}
+                {isNativeDesktop && response?.headerSizeBytes !== undefined
+                  ? formatBytes(response.headerSizeBytes)
+                  : `~${formatBytes(sizeBreakdown.exposedHeadersBytes)}`}
               </div>
               <div className="text-[10px] text-slate-500 font-mono tabular-nums">
-                {sizeBreakdown.exposedHeadersBytes} B
+                {isNativeDesktop && response?.headerSizeBytes !== undefined
+                  ? response.headerSizeBytes
+                  : sizeBreakdown.exposedHeadersBytes}{' '}
+                B
               </div>
             </div>
 
@@ -116,11 +184,13 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
             </div>
           </div>
 
-          <div className="space-y-0.5 text-[11px] text-slate-500 leading-relaxed">
-            {sizeBreakdown.browserNotes.map((n, idx) => (
-              <p key={idx}>{n}</p>
-            ))}
-          </div>
+          {!isNativeDesktop && (
+            <div className="space-y-0.5 text-[11px] text-slate-500 leading-relaxed">
+              {sizeBreakdown.browserNotes.map((n, idx) => (
+                <p key={idx}>{n}</p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -159,7 +229,8 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
         </div>
         <div className="divide-y divide-slate-800/60">
           {stages.map((stage) => {
-            const pct = Math.round((stage.duration / total) * 100);
+            const hasValue = stage.duration !== null && stage.duration !== undefined;
+            const pct = hasValue ? Math.round(((stage.duration as number) / total) * 100) : null;
             return (
               <div
                 key={stage.name}
@@ -175,10 +246,16 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
                   </div>
                 </div>
                 <div className="col-span-4 text-right font-mono tabular-nums">
-                  <span className={`font-semibold ${stage.textColor}`}>
-                    {formatDuration(stage.duration)}
-                  </span>
-                  <span className="text-slate-500 text-[11px] ml-1.5">({pct}%)</span>
+                  {hasValue ? (
+                    <>
+                      <span className={`font-semibold ${stage.textColor}`}>
+                        {formatDuration(stage.duration as number)}
+                      </span>
+                      <span className="text-slate-500 text-[11px] ml-1.5">({pct}%)</span>
+                    </>
+                  ) : (
+                    <span className="text-slate-500 text-[11px]">Unavailable</span>
+                  )}
                 </div>
               </div>
             );
@@ -186,15 +263,16 @@ export const ResponseTiming: React.FC<ResponseTimingProps> = ({ timing, response
         </div>
       </div>
 
-      {/* Browser Environment Notice */}
+      {/* Environment Notice */}
       <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-slate-900/40 border border-slate-800/80 text-[11px] text-slate-400 leading-relaxed">
         <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
         <div>
-          <span className="text-slate-300 font-medium">Browser Measurement Accuracy:</span>{' '}
-          Fetch API timers only expose client-side Preparation, Time-to-First-Byte (TTFB), and
-          Stream Download phases. DNS lookup, TCP handshake, and TLS negotiation breakdown are
-          unavailable in browser JS and are not fabricated; native Phase 7 Rust instrumentation will
-          supply socket-level timing.
+          <span className="text-slate-300 font-medium">
+            {isNativeDesktop ? 'Native Desktop Measurement:' : 'Browser Measurement Accuracy:'}
+          </span>{' '}
+          {isNativeDesktop
+            ? 'Measured natively in Rust using reqwest and tokio DNS timing. Any phase shown as "Unavailable" cannot be reliably separated on pooled/proxied connections and is intentionally never fabricated.'
+            : 'Fetch API timers only expose client-side Preparation, Time-to-First-Byte (TTFB), and Stream Download phases. DNS lookup, TCP handshake, and TLS negotiation breakdown are unavailable in browser JS and are not fabricated.'}
         </div>
       </div>
     </div>

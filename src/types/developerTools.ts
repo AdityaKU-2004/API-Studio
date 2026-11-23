@@ -22,16 +22,39 @@ export interface DeveloperToolPreferences {
   updatedAt: number;
 }
 
+export interface CertificateChainNode {
+  level: number;
+  subject: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  serialNumber: string;
+  signatureAlgorithm: string;
+  fingerprintSha256: string;
+  isCa: boolean;
+  isExpired: boolean;
+}
+
 export interface CertificateDetails {
   subject: string;
   issuer: string;
   validFrom: string;
   validTo: string;
   serialNumber?: string;
+  signatureAlgorithm?: string;
+  publicKeyAlgorithm?: string;
+  publicKeyBits?: number;
   fingerprintSha256?: string;
   subjectAltNames?: string[];
   protocol?: string;
   cipherSuite?: string;
+  isExpired?: boolean;
+  notYetValid?: boolean;
+  daysRemaining?: number;
+  hostnameMatch?: boolean;
+  trustVerified?: boolean;
+  verificationError?: string;
+  chain?: CertificateChainNode[];
 }
 
 export interface CertificateInspectionResult {
@@ -39,6 +62,7 @@ export interface CertificateInspectionResult {
   port: number;
   checkedAt: number;
   availableInBrowser: boolean;
+  mode?: 'browser' | 'native-tauri';
   protocolSupported: boolean;
   isSameOriginSecureContext?: boolean;
   browserNotice: string;

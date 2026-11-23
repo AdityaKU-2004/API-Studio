@@ -5,7 +5,7 @@ import {
   SseEventEntry,
   SseSessionState,
 } from '../types';
-import { sseClient } from '../services/protocols/sse/sseClient';
+import { getSseTransport } from '../services/runtime/transportFactory';
 import { createDefaultSseConfig } from '../services/request/protocolRequestFactory';
 import { protocolConfigRepository } from '../repositories/protocolConfigRepository';
 import { useEnvironmentStore } from './environmentStore';
@@ -77,7 +77,7 @@ export const useSseStore = create<SseState>((set, get) => ({
       };
     });
 
-    sseClient.connect(tabId, cfg, resolvedVars, {
+    getSseTransport().connect(tabId, cfg, resolvedVars, {
       onStatusChange: (status: SseConnectionStatus, reconnectAttempt = 0) => {
         set((s) => {
           const prev = s.sessionsByTabId[tabId] || createEmptySseSession(tabId);
@@ -195,7 +195,7 @@ export const useSseStore = create<SseState>((set, get) => ({
 
   disconnect: (tabId, request) => {
     const session = get().sessionsByTabId[tabId];
-    sseClient.disconnect(tabId);
+    getSseTransport().disconnect(tabId);
     pausedEventBuffers.delete(tabId);
 
     useExecutionStore.getState().addLog({
