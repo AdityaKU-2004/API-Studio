@@ -12,23 +12,35 @@ import {
   Check,
   Plus,
   Terminal,
+  Building2,
+  FolderKanban,
 } from 'lucide-react';
 import { TrafficLights } from '../common/TrafficLights';
 import { useAppStore } from '../../stores/appStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useEnvironmentStore } from '../../stores/environmentStore';
 import { useExecutionStore } from '../../stores/executionStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 
 export const TopBar: React.FC = () => {
   const {
-    workspaces,
-    activeWorkspaceId,
+    workspaces: legacyWorkspaces,
+    activeWorkspaceId: legacyWsId,
     setActiveWorkspaceId,
+    setActiveView,
     setCommandPaletteOpen,
     setSettingsOpen,
     setDocsOpen,
     setEnvironmentModalOpen,
   } = useAppStore();
+
+  const {
+    workspaces: phase8Workspaces,
+    projects,
+    activeWorkspaceId: p8WsId,
+    activeProjectId,
+    setActiveWorkspace,
+  } = useWorkspaceStore();
 
   const { theme, toggleTheme } = useUiStore();
   const { environments, activeEnvironmentId, setActiveEnvironmentId } = useEnvironmentStore();
@@ -39,7 +51,10 @@ export const TopBar: React.FC = () => {
   const workspaceRef = useRef<HTMLDivElement>(null);
   const envRef = useRef<HTMLDivElement>(null);
 
+  const workspaces = phase8Workspaces.length > 0 ? phase8Workspaces : legacyWorkspaces;
+  const activeWorkspaceId = phase8Workspaces.length > 0 ? p8WsId : legacyWsId;
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
+  const activeProject = projects.find((p) => p.id === activeProjectId);
   const activeEnvironment = environments.find((e) => e.id === activeEnvironmentId);
 
   // Close menus on outside click
@@ -75,18 +90,31 @@ export const TopBar: React.FC = () => {
         </div>
 
         {/* Workspace selector */}
-        <div className="relative" ref={workspaceRef}>
+        <div className="relative flex items-center gap-1.5" ref={workspaceRef}>
           <button
             type="button"
             onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 hover:text-slate-100 hover:bg-slate-800/50 dark:hover:bg-slate-800/50 light:hover:bg-slate-100 border border-transparent hover:border-slate-700/50 transition-colors cursor-pointer"
           >
-            <span className="truncate max-w-[120px]">{activeWorkspace.name}</span>
+            <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="truncate max-w-[130px]">{activeWorkspace?.name || 'Personal Workspace'}</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
+          {activeProject && (
+            <button
+              type="button"
+              onClick={() => setActiveView('workspaces')}
+              title={`Active Project: ${activeProject.name}`}
+              className="hidden lg:flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/60 text-[11px] text-slate-300 hover:border-cyan-500/40 cursor-pointer"
+            >
+              <FolderKanban className="w-3 h-3 text-indigo-400" />
+              <span className="truncate max-w-[110px]">{activeProject.name}</span>
+            </button>
+          )}
+
           {isWorkspaceMenuOpen && (
-            <div className="absolute top-full left-0 mt-1 w-56 rounded-lg glass-panel-dark dark:glass-panel-dark light:glass-panel-light bg-[#12161f]/95 dark:bg-[#12161f]/95 light:bg-white/95 text-slate-200 dark:text-slate-200 light:text-slate-800 border border-blue-500/20 dark:border-blue-500/20 light:border-blue-200 shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute top-full left-0 mt-1 w-64 rounded-lg glass-panel-dark dark:glass-panel-dark light:glass-panel-light bg-[#12161f]/95 dark:bg-[#12161f]/95 light:bg-white/95 text-slate-200 dark:text-slate-200 light:text-slate-800 border border-blue-500/20 dark:border-blue-500/20 light:border-blue-200 shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Workspaces
               </div>
@@ -95,7 +123,11 @@ export const TopBar: React.FC = () => {
                   key={ws.id}
                   type="button"
                   onClick={() => {
-                    setActiveWorkspaceId(ws.id);
+                    if (phase8Workspaces.length > 0) {
+                      void setActiveWorkspace(ws.id);
+                    } else {
+                      setActiveWorkspaceId(ws.id);
+                    }
                     setIsWorkspaceMenuOpen(false);
                   }}
                   className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-blue-600/20 dark:hover:bg-blue-600/20 light:hover:bg-blue-50 transition-colors cursor-pointer"
@@ -107,6 +139,19 @@ export const TopBar: React.FC = () => {
                   {ws.id === activeWorkspaceId && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
                 </button>
               ))}
+              <div className="border-t border-slate-700/50 mt-1 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsWorkspaceMenuOpen(false);
+                    setActiveView('workspaces');
+                  }}
+                  className="w-full px-3 py-1.5 text-xs text-left text-cyan-400 hover:bg-blue-600/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Workspace Dashboard &amp; Projects</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -121,7 +166,7 @@ export const TopBar: React.FC = () => {
         >
           <div className="flex items-center gap-2 truncate">
             <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
-            <span className="truncate">Search collections, requests, environments...</span>
+            <span className="truncate">Search specs, endpoints, collections, workspaces...</span>
           </div>
           <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-800/80 dark:bg-slate-800/80 light:bg-white text-slate-300 dark:text-slate-300 light:text-slate-600 border border-slate-700/60 dark:border-slate-700/60 light:border-slate-200">
             ⌘K

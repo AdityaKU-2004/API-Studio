@@ -10,6 +10,14 @@ import { ScriptTemplates } from '../scripting/ScriptTemplates';
 import { SchemaValidator } from '../testing/SchemaValidator';
 import { ResponseComparisonWorkspace } from '../../features/comparison/ResponseComparisonWorkspace';
 import { DeveloperToolsDashboard } from '../../features/developer-tools/DeveloperToolsDashboard';
+import { ApiExplorerView } from '../../features/openapi/ApiExplorerView';
+import { SpecEditorView } from '../../features/openapi/SpecEditorView';
+import { ApiDocsView } from '../../features/documentation/ApiDocsView';
+import { ApiVersionsView } from '../../features/openapi/ApiVersionsView';
+import { MockServerView } from '../../features/mocking/MockServerView';
+import { ContractTestingView } from '../../features/contract/ContractTestingView';
+import { GitWorkspaceView } from '../../features/git/GitWorkspaceView';
+import { WorkspaceDashboard } from '../../features/workspaces/WorkspaceDashboard';
 import { SearchDialog } from '../common/SearchDialog';
 import { SettingsModal } from '../common/SettingsModal';
 import { DocsModal } from '../common/DocsModal';
@@ -40,6 +48,11 @@ import { useComparisonStore } from '../../stores/comparisonStore';
 import { useDeveloperToolsStore } from '../../stores/developerToolsStore';
 import { useWebSocketStore } from '../../stores/websocketStore';
 import { useDesktopStore } from '../../stores/desktopStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useSpecStore } from '../../stores/specStore';
+import { useMockStore } from '../../stores/mockStore';
+import { useContractStore } from '../../stores/contractStore';
+import { useGitStore } from '../../stores/gitStore';
 import { storageService } from '../../services/storage/storageService';
 
 export const AppLayout: React.FC = () => {
@@ -64,6 +77,11 @@ export const AppLayout: React.FC = () => {
         useDeveloperToolsStore.getState().loadPreferences(),
         useWebSocketStore.getState().loadTemplates(),
         useDesktopStore.getState().initializeDesktopRuntime(),
+        useWorkspaceStore.getState().loadWorkspaces(),
+        useSpecStore.getState().loadSpecs(),
+        useMockStore.getState().loadMockServers(),
+        useContractStore.getState().loadReports(),
+        useGitStore.getState().loadGitConfig(),
       ]);
     };
     bootstrapStorage();
@@ -133,6 +151,14 @@ export const AppLayout: React.FC = () => {
     if (activeView === 'schemas') return <SchemaValidator mode="library" />;
     if (activeView === 'comparison') return <ResponseComparisonWorkspace />;
     if (activeView === 'devtools') return <DeveloperToolsDashboard />;
+    if (activeView === 'apis') return <ApiExplorerView />;
+    if (activeView === 'spec-editor') return <SpecEditorView />;
+    if (activeView === 'api-docs') return <ApiDocsView />;
+    if (activeView === 'api-versions') return <ApiVersionsView />;
+    if (activeView === 'contract-tests') return <ContractTestingView />;
+    if (activeView === 'mock-servers') return <MockServerView />;
+    if (activeView === 'git') return <GitWorkspaceView />;
+    if (activeView === 'workspaces') return <WorkspaceDashboard />;
 
     return (
       <>

@@ -109,7 +109,15 @@ export async function serializeRequestToNativePayload(
         auth.oauth2.accessToken?.trim() || auth.oauth2.token?.trim() || '',
         vars
       );
-      headers['Authorization'] = `Bearer ${tok}`;
+      const tokenType = auth.oauth2.tokenType || 'Bearer';
+      headers['Authorization'] = `${tokenType} ${tok}`;
+    } else if (auth.type === 'jwt' && auth.jwt?.generatedToken?.trim()) {
+      const jwtTok = resolveVariables(auth.jwt.generatedToken.trim(), vars);
+      if (auth.jwt.addTo === 'query') {
+        parsedUrl.searchParams.append(auth.jwt.queryParamName?.trim() || 'token', jwtTok);
+      } else {
+        headers['Authorization'] = `${auth.jwt.headerPrefix || 'Bearer'} ${jwtTok}`;
+      }
     }
   }
 
@@ -208,9 +216,15 @@ export async function serializeRequestToNativePayload(
       maxRedirects: request.settings?.maxRedirects ?? 10,
       tls: {
         verifySsl,
-        customCaPem: request.settings?.customCaPem,
-        clientCertPem: request.settings?.clientCertPem,
-        clientKeyPem: request.settings?.clientKeyPem,
+        customCaPem:
+          (auth?.type === 'mtls' ? auth.mtls?.caCertPem : undefined) ||
+          request.settings?.customCaPem,
+        clientCertPem:
+          (auth?.type === 'mtls' ? auth.mtls?.clientCertPem : undefined) ||
+          request.settings?.clientCertPem,
+        clientKeyPem:
+          (auth?.type === 'mtls' ? auth.mtls?.clientKeyPem : undefined) ||
+          request.settings?.clientKeyPem,
       },
       proxy: request.settings?.proxy,
     },

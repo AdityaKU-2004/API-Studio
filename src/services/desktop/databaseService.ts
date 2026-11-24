@@ -38,6 +38,10 @@ export class DesktopDatabaseService {
       scriptTemplates,
       jsonSchemas,
       protocolConfigs,
+      apiSpecs,
+      mockServers,
+      workspaces,
+      projects,
     ] = await Promise.all([
       db.collections.count(),
       db.folders.count(),
@@ -50,6 +54,10 @@ export class DesktopDatabaseService {
       db.scriptTemplates.count(),
       db.jsonSchemas.count(),
       db.protocolConfigs.count(),
+      db.apiSpecs.count(),
+      db.mockServers.count(),
+      db.workspaces.count(),
+      db.projects.count(),
     ]);
 
     const totalRecords =
@@ -63,7 +71,11 @@ export class DesktopDatabaseService {
       testReports +
       scriptTemplates +
       jsonSchemas +
-      protocolConfigs;
+      protocolConfigs +
+      apiSpecs +
+      mockServers +
+      workspaces +
+      projects;
 
     return {
       hasLegacyData: totalRecords > 0,
@@ -80,6 +92,10 @@ export class DesktopDatabaseService {
         scriptTemplates,
         jsonSchemas,
         protocolConfigs,
+        apiSpecs,
+        mockServers,
+        workspaces,
+        projects,
       },
     };
   }
@@ -105,6 +121,21 @@ export class DesktopDatabaseService {
       sseEventLogs,
       comparisonSessions,
       developerToolPreferences,
+      workspaces,
+      projects,
+      apiSpecs,
+      apiVersions,
+      documentationConfigs,
+      mockServers,
+      mockEndpoints,
+      mockRequestLogs,
+      contractConfigs,
+      contractReports,
+      gitRepos,
+      workspaceMembers,
+      collaborationComments,
+      activityLogs,
+      syncMetadata,
     ] = await Promise.all([
       db.collections.toArray(),
       db.folders.toArray(),
@@ -123,6 +154,21 @@ export class DesktopDatabaseService {
       db.sseEventLogs.toArray(),
       db.comparisonSessions.toArray(),
       db.developerToolPreferences.toArray(),
+      db.workspaces.toArray(),
+      db.projects.toArray(),
+      db.apiSpecs.toArray(),
+      db.apiVersions.toArray(),
+      db.documentationConfigs.toArray(),
+      db.mockServers.toArray(),
+      db.mockEndpoints.toArray(),
+      db.mockRequestLogs.toArray(),
+      db.contractConfigs.toArray(),
+      db.contractReports.toArray(),
+      db.gitRepos.toArray(),
+      db.workspaceMembers.toArray(),
+      db.collaborationComments.toArray(),
+      db.activityLogs.toArray(),
+      db.syncMetadata.toArray(),
     ]);
 
     return {
@@ -143,6 +189,21 @@ export class DesktopDatabaseService {
       sseEventLogs,
       comparisonSessions,
       developerToolPreferences,
+      workspaces,
+      projects,
+      apiSpecs,
+      apiVersions,
+      documentationConfigs,
+      mockServers,
+      mockEndpoints,
+      mockRequestLogs,
+      contractConfigs,
+      contractReports,
+      gitRepos,
+      workspaceMembers,
+      collaborationComments,
+      activityLogs,
+      syncMetadata,
       conflictStrategy,
     };
   }

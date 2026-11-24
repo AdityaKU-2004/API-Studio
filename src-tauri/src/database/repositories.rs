@@ -25,6 +25,22 @@ const ALL_ENTITY_TABLES: &[&str] = &[
     "comparison_sessions",
     "developer_tool_preferences",
     "application_settings",
+    "workspaces",
+    "projects",
+    "api_specifications",
+    "api_versions",
+    "documentation_configurations",
+    "mock_servers",
+    "mock_endpoints",
+    "mock_request_logs",
+    "contract_test_configurations",
+    "contract_test_reports",
+    "git_repository_configs",
+    "git_activity_metadata",
+    "workspace_memberships",
+    "collaboration_comments",
+    "activity_logs",
+    "sync_metadata",
 ];
 
 fn validate_entity_table(entity: &str) -> Result<&'static str, AppError> {
@@ -459,6 +475,253 @@ pub fn upsert_entity_in_tx(
                 params![id, i64_field(item, &["updatedAt"], now), payload_json],
             )?;
         }
+        "workspaces" => {
+            tx.execute(
+                "INSERT INTO workspaces (id, name, workspace_type, created_at, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, workspace_type=excluded.workspace_type,
+                 updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "Workspace"),
+                    str_field(item, &["type"], "personal"),
+                    i64_field(item, &["createdAt"], now),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "projects" => {
+            tx.execute(
+                "INSERT INTO projects (id, workspace_id, name, created_at, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET workspace_id=excluded.workspace_id, name=excluded.name,
+                 updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["workspaceId"], "ws-default"),
+                    str_field(item, &["name"], "Project"),
+                    i64_field(item, &["createdAt"], now),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "api_specifications" => {
+            tx.execute(
+                "INSERT INTO api_specifications (id, project_id, workspace_id, name, version, format, created_at, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, version=excluded.version,
+                 format=excluded.format, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    opt_str_field(item, &["projectId"]),
+                    opt_str_field(item, &["workspaceId"]),
+                    str_field(item, &["name"], "API Specification"),
+                    str_field(item, &["version"], "1.0.0"),
+                    str_field(item, &["format"], "yaml"),
+                    i64_field(item, &["createdAt"], now),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "api_versions" => {
+            tx.execute(
+                "INSERT INTO api_versions (id, spec_id, version_label, is_active, is_archived, created_at, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                 ON CONFLICT(id) DO UPDATE SET version_label=excluded.version_label, is_active=excluded.is_active,
+                 is_archived=excluded.is_archived, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["specId"], ""),
+                    str_field(item, &["versionLabel"], "1.0.0"),
+                    bool_field(item, &["isActive"], false) as i64,
+                    bool_field(item, &["isArchived"], false) as i64,
+                    i64_field(item, &["createdAt"], now),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "documentation_configurations" => {
+            tx.execute(
+                "INSERT INTO documentation_configurations (id, spec_id, title, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["specId"], ""),
+                    str_field(item, &["title"], "API Docs"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "mock_servers" => {
+            tx.execute(
+                "INSERT INTO mock_servers (id, project_id, name, port, created_at, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, port=excluded.port,
+                 updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    opt_str_field(item, &["projectId"]),
+                    str_field(item, &["name"], "Mock Server"),
+                    i64_field(item, &["port"], 4010),
+                    i64_field(item, &["createdAt"], now),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "mock_endpoints" => {
+            tx.execute(
+                "INSERT INTO mock_endpoints (id, server_id, method, path, enabled, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET method=excluded.method, path=excluded.path,
+                 enabled=excluded.enabled, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["serverId"], ""),
+                    str_field(item, &["method"], "GET"),
+                    str_field(item, &["path"], "/"),
+                    bool_field(item, &["enabled"], true) as i64,
+                    payload_json
+                ],
+            )?;
+        }
+        "mock_request_logs" => {
+            tx.execute(
+                "INSERT INTO mock_request_logs (id, server_id, timestamp, method, path, response_status, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["serverId"], ""),
+                    i64_field(item, &["timestamp"], now),
+                    str_field(item, &["method"], "GET"),
+                    str_field(item, &["path"], "/"),
+                    i64_field(item, &["responseStatus"], 200),
+                    payload_json
+                ],
+            )?;
+        }
+        "contract_test_configurations" => {
+            tx.execute(
+                "INSERT INTO contract_test_configurations (id, spec_id, name, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["specId"], ""),
+                    str_field(item, &["name"], "Contract Config"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "contract_test_reports" => {
+            tx.execute(
+                "INSERT INTO contract_test_reports (id, spec_id, status, started_at, completed_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET status=excluded.status, completed_at=excluded.completed_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["specId"], ""),
+                    str_field(item, &["status"], "passed"),
+                    i64_field(item, &["startedAt"], now),
+                    item.get("completedAt").and_then(|v| v.as_i64()),
+                    payload_json
+                ],
+            )?;
+        }
+        "git_repository_configs" => {
+            tx.execute(
+                "INSERT INTO git_repository_configs (id, project_id, repo_path, current_branch, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET repo_path=excluded.repo_path, current_branch=excluded.current_branch,
+                 updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    opt_str_field(item, &["projectId"]),
+                    str_field(item, &["repoPath"], ""),
+                    str_field(item, &["currentBranch"], "main"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "git_activity_metadata" => {
+            tx.execute(
+                "INSERT INTO git_activity_metadata (id, repo_id, action, timestamp, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json",
+                params![
+                    id,
+                    opt_str_field(item, &["repoId"]),
+                    str_field(item, &["action"], "commit"),
+                    i64_field(item, &["timestamp"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "workspace_memberships" => {
+            tx.execute(
+                "INSERT INTO workspace_memberships (id, workspace_id, email, role, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET role=excluded.role, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["workspaceId"], "ws-default"),
+                    str_field(item, &["email"], ""),
+                    str_field(item, &["role"], "Viewer"),
+                    payload_json
+                ],
+            )?;
+        }
+        "collaboration_comments" => {
+            tx.execute(
+                "INSERT INTO collaboration_comments (id, workspace_id, target_type, target_id, created_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["workspaceId"], "ws-default"),
+                    str_field(item, &["targetType"], "spec"),
+                    str_field(item, &["targetId"], ""),
+                    i64_field(item, &["createdAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "activity_logs" => {
+            tx.execute(
+                "INSERT INTO activity_logs (id, workspace_id, project_id, timestamp, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["workspaceId"], "ws-default"),
+                    opt_str_field(item, &["projectId"]),
+                    i64_field(item, &["timestamp"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "sync_metadata" => {
+            tx.execute(
+                "INSERT INTO sync_metadata (id, workspace_id, status, payload_json)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(id) DO UPDATE SET status=excluded.status, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["workspaceId"], "ws-default"),
+                    str_field(item, &["status"], "local-only"),
+                    payload_json
+                ],
+            )?;
+        }
         _ => return Err(AppError::new("INVALID_ENTITY_TABLE", "Unsupported entity table", true)),
     }
 
@@ -513,6 +776,21 @@ pub fn import_indexeddb_payload(
     process_list("assertion_configurations", &payload.assertion_configurations)?;
     process_list("comparison_sessions", &payload.comparison_sessions)?;
     process_list("developer_tool_preferences", &payload.developer_tool_preferences)?;
+    process_list("workspaces", &payload.workspaces)?;
+    process_list("projects", &payload.projects)?;
+    process_list("api_specifications", &payload.api_specs)?;
+    process_list("api_versions", &payload.api_versions)?;
+    process_list("documentation_configurations", &payload.documentation_configs)?;
+    process_list("mock_servers", &payload.mock_servers)?;
+    process_list("mock_endpoints", &payload.mock_endpoints)?;
+    process_list("mock_request_logs", &payload.mock_request_logs)?;
+    process_list("contract_test_configurations", &payload.contract_configs)?;
+    process_list("contract_test_reports", &payload.contract_reports)?;
+    process_list("git_repository_configs", &payload.git_repos)?;
+    process_list("workspace_memberships", &payload.workspace_members)?;
+    process_list("collaboration_comments", &payload.collaboration_comments)?;
+    process_list("activity_logs", &payload.activity_logs)?;
+    process_list("sync_metadata", &payload.sync_metadata)?;
 
     // Route Phase 6 protocol configs by protocol discriminator
     for item in &payload.protocol_configs {
@@ -669,6 +947,21 @@ mod tests {
             sse_event_logs: vec![],
             comparison_sessions: vec![],
             developer_tool_preferences: vec![],
+            workspaces: vec![],
+            projects: vec![],
+            api_specs: vec![],
+            api_versions: vec![],
+            documentation_configs: vec![],
+            mock_servers: vec![],
+            mock_endpoints: vec![],
+            mock_request_logs: vec![],
+            contract_configs: vec![],
+            contract_reports: vec![],
+            git_repos: vec![],
+            workspace_members: vec![],
+            collaboration_comments: vec![],
+            activity_logs: vec![],
+            sync_metadata: vec![],
             conflict_strategy: Some("overwrite".to_string()),
         };
 

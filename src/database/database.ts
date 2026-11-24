@@ -17,8 +17,29 @@ import {
   SavedSseEventMetadata,
   ComparisonSession,
   DeveloperToolPreferences,
+  WorkspaceRecord,
+  ProjectRecord,
+  OpenApiSpecRecord,
+  ApiVersionEntry,
+  DocumentationConfig,
+  MockServerConfig,
+  MockEndpointRule,
+  MockRequestLog,
+  ContractTestConfig,
+  ContractTestReport,
+  GitRepoConfig,
+  WorkspaceMember,
+  CollaborationComment,
+  ActivityLogEntry,
+  SyncMetadata,
 } from '../types';
-import { DATABASE_NAME, DB_SCHEMA_V1, DB_SCHEMA_V2, DB_SCHEMA_V3 } from './schema';
+import {
+  DATABASE_NAME,
+  DB_SCHEMA_V1,
+  DB_SCHEMA_V2,
+  DB_SCHEMA_V3,
+  DB_SCHEMA_V4,
+} from './schema';
 
 // In Node.js / test environments, ensure indexedDB is available via fake-indexeddb
 if (typeof window === 'undefined' || typeof window.indexedDB === 'undefined') {
@@ -56,11 +77,29 @@ export class ApiStudioDatabase extends Dexie {
   comparisonSessions!: Table<ComparisonSession, string>;
   developerToolPreferences!: Table<DeveloperToolPreferences, string>;
 
+  // Phase 8 tables
+  workspaces!: Table<WorkspaceRecord, string>;
+  projects!: Table<ProjectRecord, string>;
+  apiSpecs!: Table<OpenApiSpecRecord, string>;
+  apiVersions!: Table<ApiVersionEntry, string>;
+  documentationConfigs!: Table<DocumentationConfig, string>;
+  mockServers!: Table<MockServerConfig, string>;
+  mockEndpoints!: Table<MockEndpointRule, string>;
+  mockRequestLogs!: Table<MockRequestLog, string>;
+  contractConfigs!: Table<ContractTestConfig, string>;
+  contractReports!: Table<ContractTestReport, string>;
+  gitRepos!: Table<GitRepoConfig, string>;
+  workspaceMembers!: Table<WorkspaceMember, string>;
+  collaborationComments!: Table<CollaborationComment, string>;
+  activityLogs!: Table<ActivityLogEntry, string>;
+  syncMetadata!: Table<SyncMetadata, string>;
+
   constructor(dbName = DATABASE_NAME) {
     super(dbName);
     this.version(1).stores(DB_SCHEMA_V1);
     this.version(2).stores(DB_SCHEMA_V2);
     this.version(3).stores(DB_SCHEMA_V3);
+    this.version(4).stores(DB_SCHEMA_V4);
   }
 }
 

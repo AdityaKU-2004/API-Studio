@@ -132,7 +132,17 @@ export function buildExecutableRequest(
     } else if (auth.type === 'oauth2' && (auth.oauth2?.accessToken?.trim() || auth.oauth2?.token?.trim())) {
       const tokenVal = auth.oauth2.accessToken?.trim() || auth.oauth2.token?.trim() || '';
       const resolvedToken = resolveVariables(tokenVal, vars);
-      headers['Authorization'] = `Bearer ${resolvedToken}`;
+      const tokenType = auth.oauth2.tokenType || 'Bearer';
+      headers['Authorization'] = `${tokenType} ${resolvedToken}`;
+    } else if (auth.type === 'jwt' && auth.jwt?.generatedToken?.trim()) {
+      const resolvedJwt = resolveVariables(auth.jwt.generatedToken.trim(), vars);
+      if (auth.jwt.addTo === 'query') {
+        const paramName = auth.jwt.queryParamName?.trim() || 'token';
+        finalUrlObj.searchParams.append(paramName, resolvedJwt);
+      } else {
+        const prefix = auth.jwt.headerPrefix || 'Bearer';
+        headers['Authorization'] = `${prefix} ${resolvedJwt}`;
+      }
     }
   }
 

@@ -457,6 +457,36 @@ pub struct IndexedDbMigrationPayload {
     #[serde(default)]
     pub developer_tool_preferences: Vec<serde_json::Value>,
     #[serde(default)]
+    pub workspaces: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub projects: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub api_specs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub api_versions: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub documentation_configs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub mock_servers: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub mock_endpoints: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub mock_request_logs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub contract_configs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub contract_reports: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub git_repos: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub workspace_members: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub collaboration_comments: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub activity_logs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub sync_metadata: Vec<serde_json::Value>,
+    #[serde(default)]
     pub conflict_strategy: Option<String>, // "skip" | "overwrite"
 }
 
@@ -508,4 +538,141 @@ pub struct NativeReadFileResult {
     pub content_utf8: Option<String>,
     pub content_base64: String,
     pub is_binary: bool,
+}
+
+// ===================== Phase 8 Mock Server, Git & Archive Models =====================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MockEndpointRule {
+    pub id: String,
+    pub server_id: String,
+    pub method: String,
+    pub path: String,
+    pub enabled: bool,
+    pub status_code: u16,
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub content_type: String,
+    #[serde(default)]
+    pub delay_ms: u64,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MockServerConfig {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    #[serde(default = "default_localhost")]
+    pub host: String,
+    pub port: u16,
+    #[serde(default)]
+    pub allow_lan_exposure: bool,
+    #[serde(default)]
+    pub spec_id: Option<String>,
+    #[serde(default)]
+    pub endpoints: Vec<MockEndpointRule>,
+}
+
+fn default_localhost() -> String {
+    "127.0.0.1".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MockRequestLog {
+    pub id: String,
+    pub server_id: String,
+    pub timestamp: i64,
+    pub method: String,
+    pub path: String,
+    pub query: String,
+    pub headers: HashMap<String, String>,
+    pub request_body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub matched_endpoint_id: Option<String>,
+    pub response_status: u16,
+    pub response_time_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remote_addr: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MockServerStatus {
+    pub server_id: String,
+    pub running: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bound_address: Option<String>,
+    pub port: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<i64>,
+    pub request_count: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitStatusEntry {
+    pub path: String,
+    pub index_status: String,
+    pub worktree_status: String,
+    pub staged: bool,
+    pub untracked: bool,
+    pub modified: bool,
+    pub deleted: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitCommitEntry {
+    pub hash: String,
+    pub short_hash: String,
+    pub author: String,
+    pub email: String,
+    pub timestamp: i64,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitBranchInfo {
+    pub name: String,
+    pub is_current: bool,
+    pub is_remote: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_commit_hash: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitDiffResult {
+    pub path: String,
+    pub staged: bool,
+    pub patch: String,
+    pub additions: usize,
+    pub deletions: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitSecretFinding {
+    pub path: String,
+    pub line: usize,
+    pub pattern_name: String,
+    pub snippet: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZipArchiveValidationReport {
+    pub valid: bool,
+    pub total_entries: usize,
+    pub total_uncompressed_bytes: u64,
+    pub errors: Vec<String>,
 }

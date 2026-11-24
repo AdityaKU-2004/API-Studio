@@ -18,6 +18,7 @@ export * from './comparison';
 export * from './developerTools';
 export * from './diagnostics';
 export * from './desktop';
+export * from './phase8';
 
 export interface Workspace {
   id: string;
@@ -37,5 +38,11 @@ export type SidebarSection =
   | 'comparison'
   | 'devtools'
   | 'apis'
+  | 'spec-editor'
+  | 'api-docs'
+  | 'api-versions'
+  | 'contract-tests'
   | 'mock-servers'
+  | 'git'
+  | 'workspaces'
   | 'monitors';

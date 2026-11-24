@@ -1,4 +1,12 @@
-export type AuthType = 'inherit' | 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
+export type AuthType =
+  | 'inherit'
+  | 'none'
+  | 'bearer'
+  | 'basic'
+  | 'apikey'
+  | 'oauth2'
+  | 'jwt'
+  | 'mtls';
 
 export interface ApiKeyAuth {
   key: string;
@@ -24,6 +32,7 @@ export type OAuth2GrantType =
   | 'authorization_code'
   | 'authorization_code_pkce'
   | 'client_credentials'
+  | 'refresh_token'
   | 'password';
 
 export interface OAuth2Auth {
@@ -40,6 +49,37 @@ export interface OAuth2Auth {
   password?: string; // for legacy password grant
   token?: string;
   accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+  expiresAt?: number;
+  lastRefreshedAt?: number;
+  pkceVerifier?: string;
+  pkceChallenge?: string;
+  pkceMethod?: 'S256' | 'plain';
+  authorizationCode?: string;
+  credentialRef?: string;
+}
+
+export interface JwtBearerAuth {
+  algorithm: 'HS256' | 'HS384' | 'HS512' | 'RS256';
+  secretOrPrivateKey: string;
+  payloadJson: string;
+  headerJson?: string;
+  addTo: 'header' | 'query';
+  headerPrefix?: string;
+  queryParamName?: string;
+  expiresInSeconds?: number;
+  generatedToken?: string;
+  credentialRef?: string;
+}
+
+export interface MutualTlsAuth {
+  clientCertPem: string;
+  clientKeyPem: string;
+  caCertPem?: string;
+  passphrase?: string;
+  serverName?: string;
+  credentialRef?: string;
 }
 
 export interface AuthConfig {
@@ -49,4 +89,6 @@ export interface AuthConfig {
   bearer?: BearerAuth;
   basic?: BasicAuth;
   oauth2?: OAuth2Auth;
+  jwt?: JwtBearerAuth;
+  mtls?: MutualTlsAuth;
 }

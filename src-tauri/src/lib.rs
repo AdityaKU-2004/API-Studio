@@ -1,15 +1,19 @@
 pub mod commands;
 pub mod database;
+pub mod git;
+pub mod mocking;
 pub mod models;
 pub mod networking;
 pub mod security;
 pub mod utils;
 
 use commands::{
-    certificate_commands, database_commands, diagnostics_commands, file_commands, graphql_commands,
-    http_commands, security_commands, sse_commands, websocket_commands,
+    archive_commands, certificate_commands, database_commands, diagnostics_commands, file_commands,
+    git_commands, graphql_commands, http_commands, mock_commands, security_commands, sse_commands,
+    websocket_commands,
 };
 use database::connection::DbState;
+use mocking::mock_server::MockServerManager;
 use networking::graphql_client::GraphqlSubscriptionManager;
 use networking::http_client::HttpCancelRegistry;
 use networking::proxy_manager::ProxyState;
@@ -50,6 +54,7 @@ pub fn run() {
             app.manage(WebSocketManager::default());
             app.manage(SseManager::default());
             app.manage(GraphqlSubscriptionManager::default());
+            app.manage(MockServerManager::default());
             app.manage(log_buf);
 
             Ok(())
@@ -87,6 +92,23 @@ pub fn run() {
             diagnostics_commands::get_diagnostic_logs,
             diagnostics_commands::clear_diagnostic_logs,
             diagnostics_commands::export_diagnostic_logs,
+            mock_commands::mock_start_server,
+            mock_commands::mock_stop_server,
+            mock_commands::mock_update_routes,
+            mock_commands::mock_server_status,
+            git_commands::git_init_repo,
+            git_commands::git_status,
+            git_commands::git_stage_paths,
+            git_commands::git_unstage_paths,
+            git_commands::git_scan_staged_secrets,
+            git_commands::git_commit_changes,
+            git_commands::git_list_commits,
+            git_commands::git_list_branches,
+            git_commands::git_create_branch,
+            git_commands::git_switch_branch,
+            git_commands::git_diff_file,
+            git_commands::git_discard_changes,
+            archive_commands::validate_project_zip,
         ])
         .build(tauri::generate_context!())
         .expect("Failed to build API Studio Tauri desktop application");
@@ -104,6 +126,9 @@ pub fn run() {
             }
             if let Some(gql) = app_handle.try_state::<GraphqlSubscriptionManager>() {
                 gql.stop_all();
+            }
+            if let Some(mock_mgr) = app_handle.try_state::<MockServerManager>() {
+                mock_mgr.stop_all_sync();
             }
         }
     });

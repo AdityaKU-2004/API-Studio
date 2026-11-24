@@ -146,6 +146,10 @@ export interface IndexedDbInspectionSummary {
     scriptTemplates: number;
     jsonSchemas: number;
     protocolConfigs: number;
+    apiSpecs?: number;
+    mockServers?: number;
+    workspaces?: number;
+    projects?: number;
   };
 }
 
