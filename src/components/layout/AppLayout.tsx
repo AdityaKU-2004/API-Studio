@@ -18,6 +18,15 @@ import { MockServerView } from '../../features/mocking/MockServerView';
 import { ContractTestingView } from '../../features/contract/ContractTestingView';
 import { GitWorkspaceView } from '../../features/git/GitWorkspaceView';
 import { WorkspaceDashboard } from '../../features/workspaces/WorkspaceDashboard';
+import { PerformanceTestingView } from '../../features/performance/PerformanceTestingView';
+import { SecurityAuditView } from '../../features/security/SecurityAuditView';
+import { MonitoringView } from '../../features/monitoring/MonitoringView';
+import { ObservabilityView } from '../../features/observability/ObservabilityView';
+import { DatabaseToolsView } from '../../features/database-tools/DatabaseToolsView';
+import { DependencyGraphView } from '../../features/dependency/DependencyGraphView';
+import { WorkflowBuilderView } from '../../features/workflows/WorkflowBuilderView';
+import { CiCdAndCliView } from '../../features/cicd/CiCdAndCliView';
+import { AnalyticsCenterView } from '../../features/analytics/AnalyticsCenterView';
 import { SearchDialog } from '../common/SearchDialog';
 import { SettingsModal } from '../common/SettingsModal';
 import { DocsModal } from '../common/DocsModal';
@@ -53,6 +62,12 @@ import { useSpecStore } from '../../stores/specStore';
 import { useMockStore } from '../../stores/mockStore';
 import { useContractStore } from '../../stores/contractStore';
 import { useGitStore } from '../../stores/gitStore';
+import { usePerformanceStore } from '../../stores/performanceStore';
+import { useSecurityAuditStore } from '../../stores/securityAuditStore';
+import { useMonitoringStore } from '../../stores/monitoringStore';
+import { useDbToolsStore } from '../../stores/dbToolsStore';
+import { useWorkflowStore } from '../../stores/workflowStore';
+import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { storageService } from '../../services/storage/storageService';
 
 export const AppLayout: React.FC = () => {
@@ -82,7 +97,13 @@ export const AppLayout: React.FC = () => {
         useMockStore.getState().loadMockServers(),
         useContractStore.getState().loadReports(),
         useGitStore.getState().loadGitConfig(),
+        usePerformanceStore.getState().loadPerformanceData(),
+        useSecurityAuditStore.getState().loadSecurityAudits(),
+        useMonitoringStore.getState().loadMonitors(),
+        useDbToolsStore.getState().loadDbTools(),
+        useWorkflowStore.getState().loadWorkflows(),
       ]);
+      await useAnalyticsStore.getState().refreshAnalytics();
     };
     bootstrapStorage();
   }, []);
@@ -159,6 +180,16 @@ export const AppLayout: React.FC = () => {
     if (activeView === 'mock-servers') return <MockServerView />;
     if (activeView === 'git') return <GitWorkspaceView />;
     if (activeView === 'workspaces') return <WorkspaceDashboard />;
+    if (activeView === 'performance') return <PerformanceTestingView />;
+    if (activeView === 'security-audit') return <SecurityAuditView />;
+    if (activeView === 'monitors') return <MonitoringView />;
+    if (activeView === 'observability') return <ObservabilityView />;
+    if (activeView === 'db-tools') return <DatabaseToolsView />;
+    if (activeView === 'dependencies') return <DependencyGraphView />;
+    if (activeView === 'workflows') return <WorkflowBuilderView />;
+    if (activeView === 'cicd') return <CiCdAndCliView key="cicd" initialTab="cicd" />;
+    if (activeView === 'cli') return <CiCdAndCliView key="cli" initialTab="cli" />;
+    if (activeView === 'analytics') return <AnalyticsCenterView />;
 
     return (
       <>

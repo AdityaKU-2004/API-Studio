@@ -10,6 +10,10 @@ rust-version = "1.77.2"
 name = "api_studio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "api-studio"
+path = "src/bin/api_studio.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -41,6 +45,9 @@ x509-parser = "0.16"
 sha2 = "0.10"
 base64 = "0.22"
 rusqlite = { version = "0.32", features = ["bundled"] }
+tokio-postgres = "0.7"
+mysql_async = { version = "0.34", default-features = false, features = ["default-rustls"] }
+clap = { version = "4", features = ["derive"] }
 keyring = "3"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }

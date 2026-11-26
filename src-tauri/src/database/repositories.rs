@@ -41,6 +41,22 @@ const ALL_ENTITY_TABLES: &[&str] = &[
     "collaboration_comments",
     "activity_logs",
     "sync_metadata",
+    "performance_test_configs",
+    "performance_test_runs",
+    "performance_metrics",
+    "security_audit_configs",
+    "security_findings",
+    "monitoring_configs",
+    "monitoring_results",
+    "alert_configs",
+    "database_connection_profiles",
+    "query_history",
+    "environment_validation_results",
+    "dependency_graph_data",
+    "automation_workflows",
+    "workflow_executions",
+    "cli_configurations",
+    "analytics_snapshots",
 ];
 
 fn validate_entity_table(entity: &str) -> Result<&'static str, AppError> {
@@ -722,6 +738,228 @@ pub fn upsert_entity_in_tx(
                 ],
             )?;
         }
+        "performance_test_configs" => {
+            tx.execute(
+                "INSERT INTO performance_test_configs (id, name, mode, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, mode=excluded.mode, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "Performance Test"),
+                    str_field(item, &["mode"], "load"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "performance_test_runs" => {
+            tx.execute(
+                "INSERT INTO performance_test_runs (id, config_id, status, started_at, completed_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET status=excluded.status, completed_at=excluded.completed_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["configId"], ""),
+                    str_field(item, &["status"], "completed"),
+                    i64_field(item, &["startedAt"], now),
+                    item.get("completedAt").and_then(|v| v.as_i64()),
+                    payload_json
+                ],
+            )?;
+        }
+        "performance_metrics" => {
+            tx.execute(
+                "INSERT INTO performance_metrics (id, run_id, timestamp, payload_json)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["runId"], ""),
+                    i64_field(item, &["timestamp"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "security_audit_configs" => {
+            tx.execute(
+                "INSERT INTO security_audit_configs (id, name, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "Security Audit"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "security_findings" => {
+            tx.execute(
+                "INSERT INTO security_findings (id, audit_id, severity, status, detected_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET severity=excluded.severity, status=excluded.status, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["auditId"], ""),
+                    str_field(item, &["severity"], "medium"),
+                    str_field(item, &["status"], "open"),
+                    i64_field(item, &["detectedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "monitoring_configs" => {
+            tx.execute(
+                "INSERT INTO monitoring_configs (id, name, protocol, enabled, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, protocol=excluded.protocol, enabled=excluded.enabled, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "API Monitor"),
+                    str_field(item, &["protocol"], "http"),
+                    if bool_field(item, &["enabled"], true) { 1i64 } else { 0i64 },
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "monitoring_results" => {
+            tx.execute(
+                "INSERT INTO monitoring_results (id, monitor_id, timestamp, status, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET status=excluded.status, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["monitorId"], ""),
+                    i64_field(item, &["timestamp"], now),
+                    str_field(item, &["status"], "unknown"),
+                    payload_json
+                ],
+            )?;
+        }
+        "alert_configs" => {
+            tx.execute(
+                "INSERT INTO alert_configs (id, monitor_id, name, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["monitorId"], ""),
+                    str_field(item, &["name"], "Alert Rule"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "database_connection_profiles" => {
+            tx.execute(
+                "INSERT INTO database_connection_profiles (id, name, engine, credential_ref, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, engine=excluded.engine, credential_ref=excluded.credential_ref, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "Database"),
+                    str_field(item, &["engine"], "sqlite"),
+                    opt_str_field(item, &["credentialRef"]),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "query_history" => {
+            tx.execute(
+                "INSERT INTO query_history (id, profile_id, executed_at, success, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["profileId"], ""),
+                    i64_field(item, &["executedAt"], now),
+                    if bool_field(item, &["success"], true) { 1i64 } else { 0i64 },
+                    payload_json
+                ],
+            )?;
+        }
+        "environment_validation_results" => {
+            tx.execute(
+                "INSERT INTO environment_validation_results (id, environment_id, checked_at, valid, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET valid=excluded.valid, checked_at=excluded.checked_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["environmentId"], ""),
+                    i64_field(item, &["checkedAt"], now),
+                    if bool_field(item, &["valid"], true) { 1i64 } else { 0i64 },
+                    payload_json
+                ],
+            )?;
+        }
+        "dependency_graph_data" => {
+            tx.execute(
+                "INSERT INTO dependency_graph_data (id, name, generated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, generated_at=excluded.generated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "Dependency Graph"),
+                    i64_field(item, &["generatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "automation_workflows" => {
+            tx.execute(
+                "INSERT INTO automation_workflows (id, name, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "Automation Workflow"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "workflow_executions" => {
+            tx.execute(
+                "INSERT INTO workflow_executions (id, workflow_id, status, started_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET status=excluded.status, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["workflowId"], ""),
+                    str_field(item, &["status"], "passed"),
+                    i64_field(item, &["startedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "cli_configurations" => {
+            tx.execute(
+                "INSERT INTO cli_configurations (id, name, subcommand, updated_at, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT(id) DO UPDATE SET name=excluded.name, subcommand=excluded.subcommand, updated_at=excluded.updated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    str_field(item, &["name"], "CLI Config"),
+                    str_field(item, &["subcommand"], "run tests"),
+                    i64_field(item, &["updatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
+        "analytics_snapshots" => {
+            tx.execute(
+                "INSERT INTO analytics_snapshots (id, generated_at, payload_json)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(id) DO UPDATE SET generated_at=excluded.generated_at, payload_json=excluded.payload_json",
+                params![
+                    id,
+                    i64_field(item, &["generatedAt"], now),
+                    payload_json
+                ],
+            )?;
+        }
         _ => return Err(AppError::new("INVALID_ENTITY_TABLE", "Unsupported entity table", true)),
     }
 
@@ -791,6 +1029,22 @@ pub fn import_indexeddb_payload(
     process_list("collaboration_comments", &payload.collaboration_comments)?;
     process_list("activity_logs", &payload.activity_logs)?;
     process_list("sync_metadata", &payload.sync_metadata)?;
+    process_list("performance_test_configs", &payload.performance_test_configs)?;
+    process_list("performance_test_runs", &payload.performance_test_runs)?;
+    process_list("performance_metrics", &payload.performance_metrics)?;
+    process_list("security_audit_configs", &payload.security_audit_configs)?;
+    process_list("security_findings", &payload.security_findings)?;
+    process_list("monitoring_configs", &payload.monitoring_configs)?;
+    process_list("monitoring_results", &payload.monitoring_results)?;
+    process_list("alert_configs", &payload.alert_configs)?;
+    process_list("database_connection_profiles", &payload.database_connection_profiles)?;
+    process_list("query_history", &payload.query_history)?;
+    process_list("environment_validation_results", &payload.environment_validation_results)?;
+    process_list("dependency_graph_data", &payload.dependency_graph_data)?;
+    process_list("automation_workflows", &payload.automation_workflows)?;
+    process_list("workflow_executions", &payload.workflow_executions)?;
+    process_list("cli_configurations", &payload.cli_configurations)?;
+    process_list("analytics_snapshots", &payload.analytics_snapshots)?;
 
     // Route Phase 6 protocol configs by protocol discriminator
     for item in &payload.protocol_configs {
@@ -962,6 +1216,22 @@ mod tests {
             collaboration_comments: vec![],
             activity_logs: vec![],
             sync_metadata: vec![],
+            performance_test_configs: vec![],
+            performance_test_runs: vec![],
+            performance_metrics: vec![],
+            security_audit_configs: vec![],
+            security_findings: vec![],
+            monitoring_configs: vec![],
+            monitoring_results: vec![],
+            alert_configs: vec![],
+            database_connection_profiles: vec![],
+            query_history: vec![],
+            environment_validation_results: vec![],
+            dependency_graph_data: vec![],
+            automation_workflows: vec![],
+            workflow_executions: vec![],
+            cli_configurations: vec![],
+            analytics_snapshots: vec![],
             conflict_strategy: Some("overwrite".to_string()),
         };
 

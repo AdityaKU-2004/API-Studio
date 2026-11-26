@@ -1,24 +1,32 @@
+pub mod cli;
 pub mod commands;
 pub mod database;
+pub mod db_tools;
 pub mod git;
 pub mod mocking;
 pub mod models;
+pub mod monitoring;
 pub mod networking;
+pub mod performance;
 pub mod security;
+pub mod security_audit;
 pub mod utils;
 
 use commands::{
     archive_commands, certificate_commands, database_commands, diagnostics_commands, file_commands,
-    git_commands, graphql_commands, http_commands, mock_commands, security_commands, sse_commands,
-    websocket_commands,
+    git_commands, graphql_commands, http_commands, mock_commands, phase9_commands,
+    security_commands, sse_commands, websocket_commands,
 };
 use database::connection::DbState;
+use db_tools::db_manager::DbQueryCancelRegistry;
 use mocking::mock_server::MockServerManager;
+use monitoring::monitor_service::MonitorSchedulerManager;
 use networking::graphql_client::GraphqlSubscriptionManager;
 use networking::http_client::HttpCancelRegistry;
 use networking::proxy_manager::ProxyState;
 use networking::sse_manager::SseManager;
 use networking::websocket_manager::WebSocketManager;
+use performance::engine::PerformanceRunRegistry;
 use tauri::{Manager, RunEvent};
 use utils::logger::LogBuffer;
 
@@ -55,6 +63,9 @@ pub fn run() {
             app.manage(SseManager::default());
             app.manage(GraphqlSubscriptionManager::default());
             app.manage(MockServerManager::default());
+            app.manage(PerformanceRunRegistry::default());
+            app.manage(MonitorSchedulerManager::default());
+            app.manage(DbQueryCancelRegistry::default());
             app.manage(log_buf);
 
             Ok(())
@@ -109,6 +120,18 @@ pub fn run() {
             git_commands::git_diff_file,
             git_commands::git_discard_changes,
             archive_commands::validate_project_zip,
+            phase9_commands::perf_run_test,
+            phase9_commands::perf_cancel_test,
+            phase9_commands::security_audit_endpoint,
+            phase9_commands::monitor_run_check,
+            phase9_commands::monitor_start_background,
+            phase9_commands::monitor_stop_background,
+            phase9_commands::monitor_dispatch_webhook,
+            phase9_commands::db_tools_test_connection,
+            phase9_commands::db_tools_inspect_schema,
+            phase9_commands::db_tools_execute_query,
+            phase9_commands::db_tools_cancel_query,
+            phase9_commands::cli_execute_preview,
         ])
         .build(tauri::generate_context!())
         .expect("Failed to build API Studio Tauri desktop application");
@@ -129,6 +152,12 @@ pub fn run() {
             }
             if let Some(mock_mgr) = app_handle.try_state::<MockServerManager>() {
                 mock_mgr.stop_all_sync();
+            }
+            if let Some(perf_mgr) = app_handle.try_state::<PerformanceRunRegistry>() {
+                perf_mgr.cancel_all();
+            }
+            if let Some(mon_mgr) = app_handle.try_state::<MonitorSchedulerManager>() {
+                mon_mgr.stop_all_sync();
             }
         }
     });

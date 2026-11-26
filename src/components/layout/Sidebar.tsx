@@ -22,6 +22,16 @@ import {
   History,
   ShieldCheck,
   Building2,
+  Activity,
+  ShieldAlert,
+  HeartPulse,
+  Eye,
+  Database,
+  GitFork,
+  Workflow,
+  GitCommitHorizontal,
+  Terminal,
+  BarChart2,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -56,6 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
       { id: 'spec-editor', label: 'Spec Editor', icon: <FileEdit className="w-4 h-4" /> },
       { id: 'api-docs', label: 'API Docs', icon: <BookOpen className="w-4 h-4" /> },
       { id: 'api-versions', label: 'API Versions & Diff', icon: <History className="w-4 h-4" /> },
+      { id: 'dependencies', label: 'Dependency Graph', icon: <GitFork className="w-4 h-4" /> },
     ],
   },
   {
@@ -63,6 +74,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Testing',
     items: [
       { id: 'runner', label: 'Collection Runner', icon: <PlayCircle className="w-4 h-4" /> },
+      { id: 'performance', label: 'Performance Testing', icon: <Activity className="w-4 h-4" /> },
+      { id: 'security-audit', label: 'Security Audit', icon: <ShieldAlert className="w-4 h-4" /> },
       { id: 'contract-tests', label: 'Contract Testing', icon: <ShieldCheck className="w-4 h-4" /> },
       { id: 'suites', label: 'Test Suites', icon: <FlaskConical className="w-4 h-4" /> },
       { id: 'reports', label: 'Test Reports', icon: <BarChart3 className="w-4 h-4" /> },
@@ -75,13 +88,32 @@ const NAV_GROUPS: NavGroup[] = [
     items: [{ id: 'mock-servers', label: 'Mock Servers', icon: <Server className="w-4 h-4" /> }],
   },
   {
-    id: 'dev-tools',
-    label: 'Development Tools',
+    id: 'monitoring',
+    label: 'Monitoring',
     items: [
+      { id: 'monitors', label: 'API Monitoring', icon: <HeartPulse className="w-4 h-4" /> },
+      { id: 'observability', label: 'Observability & Traces', icon: <Eye className="w-4 h-4" /> },
+      { id: 'analytics', label: 'Analytics & Reports', icon: <BarChart2 className="w-4 h-4" /> },
+    ],
+  },
+  {
+    id: 'dev-tools',
+    label: 'Developer Tools',
+    items: [
+      { id: 'db-tools', label: 'Database Tools', icon: <Database className="w-4 h-4" /> },
       { id: 'git', label: 'Git Client', icon: <GitBranch className="w-4 h-4" /> },
       { id: 'comparison', label: 'Response Diff', icon: <GitCompare className="w-4 h-4" /> },
       { id: 'templates', label: 'Script Templates', icon: <FileCode2 className="w-4 h-4" /> },
       { id: 'devtools', label: 'Developer Tools', icon: <Wrench className="w-4 h-4" /> },
+    ],
+  },
+  {
+    id: 'devops',
+    label: 'DevOps',
+    items: [
+      { id: 'workflows', label: 'Automation Workflows', icon: <Workflow className="w-4 h-4" /> },
+      { id: 'cicd', label: 'CI/CD Integration', icon: <GitCommitHorizontal className="w-4 h-4" /> },
+      { id: 'cli', label: 'API CLI', icon: <Terminal className="w-4 h-4" /> },
     ],
   },
   {

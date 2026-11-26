@@ -1,5 +1,5 @@
 export const DATABASE_NAME = 'ApiStudioDB';
-export const CURRENT_DATABASE_VERSION = 4;
+export const CURRENT_DATABASE_VERSION = 5;
 
 export const DB_SCHEMA_V1 = {
   collections: 'id, name, order, createdAt, updatedAt',
@@ -46,4 +46,24 @@ export const DB_SCHEMA_V4 = {
   collaborationComments: 'id, workspaceId, targetType, targetId, createdAt',
   activityLogs: 'id, workspaceId, projectId, timestamp',
   syncMetadata: 'id, workspaceId, status',
+};
+
+export const DB_SCHEMA_V5 = {
+  ...DB_SCHEMA_V4,
+  performanceTestConfigs: 'id, name, mode, collectionId, environmentId, updatedAt',
+  performanceTestRuns: 'id, configId, status, startedAt, completedAt',
+  performanceMetrics: 'id, runId, timestamp',
+  securityAuditConfigs: 'id, name, collectionId, specId, updatedAt',
+  securityFindings: 'id, auditId, severity, category, status, detectedAt',
+  monitoringConfigs: 'id, name, protocol, enabled, paused, updatedAt',
+  monitoringResults: 'id, monitorId, status, timestamp',
+  alertConfigs: 'id, monitorId, name, updatedAt',
+  databaseConnectionProfiles: 'id, name, engine, updatedAt',
+  queryHistory: 'id, profileId, executedAt, success',
+  environmentValidationResults: 'id, environmentId, checkedAt, valid',
+  dependencyGraphData: 'id, name, generatedAt',
+  automationWorkflows: 'id, name, environmentId, updatedAt',
+  workflowExecutions: 'id, workflowId, status, startedAt, completedAt',
+  cliConfigurations: 'id, name, subcommand, updatedAt',
+  analyticsSnapshots: 'id, generatedAt',
 };

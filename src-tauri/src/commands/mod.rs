@@ -7,6 +7,7 @@ pub mod git_commands;
 pub mod graphql_commands;
 pub mod http_commands;
 pub mod mock_commands;
+pub mod phase9_commands;
 pub mod security_commands;
 pub mod sse_commands;
 pub mod websocket_commands;

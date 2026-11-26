@@ -19,6 +19,7 @@ export * from './developerTools';
 export * from './diagnostics';
 export * from './desktop';
 export * from './phase8';
+export * from './phase9';
 
 export interface Workspace {
   id: string;
@@ -45,4 +46,13 @@ export type SidebarSection =
   | 'mock-servers'
   | 'git'
   | 'workspaces'
-  | 'monitors';
+  | 'monitors'
+  | 'performance'
+  | 'security-audit'
+  | 'observability'
+  | 'db-tools'
+  | 'dependencies'
+  | 'workflows'
+  | 'cicd'
+  | 'cli'
+  | 'analytics';

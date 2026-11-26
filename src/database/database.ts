@@ -32,6 +32,22 @@ import {
   CollaborationComment,
   ActivityLogEntry,
   SyncMetadata,
+  PerformanceTestConfig,
+  PerformanceTestRun,
+  PerformanceMetricSample,
+  SecurityAuditConfig,
+  SecurityFinding,
+  MonitorConfig,
+  MonitorCheckResult,
+  AlertConfig,
+  DatabaseConnectionProfile,
+  SqlQueryHistoryItem,
+  EnvironmentValidationResult,
+  DependencyGraphData,
+  AutomationWorkflow,
+  WorkflowExecutionReport,
+  CliConfiguration,
+  AnalyticsSnapshot,
 } from '../types';
 import {
   DATABASE_NAME,
@@ -39,6 +55,7 @@ import {
   DB_SCHEMA_V2,
   DB_SCHEMA_V3,
   DB_SCHEMA_V4,
+  DB_SCHEMA_V5,
 } from './schema';
 
 // In Node.js / test environments, ensure indexedDB is available via fake-indexeddb
@@ -94,12 +111,31 @@ export class ApiStudioDatabase extends Dexie {
   activityLogs!: Table<ActivityLogEntry, string>;
   syncMetadata!: Table<SyncMetadata, string>;
 
+  // Phase 9 tables
+  performanceTestConfigs!: Table<PerformanceTestConfig, string>;
+  performanceTestRuns!: Table<PerformanceTestRun, string>;
+  performanceMetrics!: Table<PerformanceMetricSample, string>;
+  securityAuditConfigs!: Table<SecurityAuditConfig, string>;
+  securityFindings!: Table<SecurityFinding, string>;
+  monitoringConfigs!: Table<MonitorConfig, string>;
+  monitoringResults!: Table<MonitorCheckResult, string>;
+  alertConfigs!: Table<AlertConfig, string>;
+  databaseConnectionProfiles!: Table<DatabaseConnectionProfile, string>;
+  queryHistory!: Table<SqlQueryHistoryItem, string>;
+  environmentValidationResults!: Table<EnvironmentValidationResult, string>;
+  dependencyGraphData!: Table<DependencyGraphData, string>;
+  automationWorkflows!: Table<AutomationWorkflow, string>;
+  workflowExecutions!: Table<WorkflowExecutionReport, string>;
+  cliConfigurations!: Table<CliConfiguration, string>;
+  analyticsSnapshots!: Table<AnalyticsSnapshot, string>;
+
   constructor(dbName = DATABASE_NAME) {
     super(dbName);
     this.version(1).stores(DB_SCHEMA_V1);
     this.version(2).stores(DB_SCHEMA_V2);
     this.version(3).stores(DB_SCHEMA_V3);
     this.version(4).stores(DB_SCHEMA_V4);
+    this.version(5).stores(DB_SCHEMA_V5);
   }
 }
 

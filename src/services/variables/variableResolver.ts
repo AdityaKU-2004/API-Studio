@@ -254,6 +254,10 @@ export function resolveTemplateString(
   };
 }
 
+export function substituteVariables(template: string, context: VariableInput): string {
+  return resolveTemplateString(template, context).resolved;
+}
+
 /**
  * Masks any secret variable values.
  * Supports:

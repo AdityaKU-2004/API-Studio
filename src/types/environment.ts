@@ -1,3 +1,5 @@
+import { EnvironmentProfileType } from './phase9';
+
 export interface EnvironmentVariable {
   id: string;
   key: string;
@@ -13,6 +15,7 @@ export interface EnvironmentVariable {
 export interface Environment {
   id: string;
   name: string;
+  profileType?: EnvironmentProfileType;
   description?: string;
   isDefault?: boolean;
   variables: EnvironmentVariable[];

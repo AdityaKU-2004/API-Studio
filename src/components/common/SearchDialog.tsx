@@ -15,6 +15,16 @@ import {
   FileEdit,
   GitBranch,
   History,
+  Activity,
+  ShieldAlert,
+  HeartPulse,
+  Eye,
+  Database,
+  GitFork,
+  Workflow,
+  GitCommitHorizontal,
+  Terminal,
+  BarChart2,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useCollectionStore } from '../../stores/collectionStore';
@@ -264,6 +274,16 @@ export const SearchDialog: React.FC = () => {
       { id: 'view-ws', title: 'Workspace & Project Dashboard', subtitle: 'Manage projects, team RBAC roles, comments & ZIP export', targetView: 'workspaces' },
       { id: 'ws-comparison', title: 'Response Comparison', subtitle: 'Diff two HTTP responses (JSON, text, and headers)', targetView: 'comparison' },
       { id: 'ws-devtools', title: 'Developer Tools & SSL Inspector', subtitle: 'JSON Formatter, JSON-to-TS, JWT, Base64, Hash, UUID, Regex, SSL', targetView: 'devtools' },
+      { id: 'cmd-perf', title: 'Run Performance Test', subtitle: 'Bounded concurrency load testing & latency percentiles', targetView: 'performance' },
+      { id: 'cmd-sec', title: 'Run Security Audit', subtitle: 'Passive HTTPS/TLS/Headers, exposure & OpenAPI security scan', targetView: 'security-audit' },
+      { id: 'cmd-mon', title: 'Open Monitoring', subtitle: 'Automated health checks, uptime & webhook alerts', targetView: 'monitors' },
+      { id: 'cmd-obs', title: 'Open Observability', subtitle: 'Trace correlation, DNS/TCP/TLS timing & header redaction', targetView: 'observability' },
+      { id: 'cmd-db', title: 'Open Database Tools', subtitle: 'SQLite / PostgreSQL / MySQL schema explorer & SQL runner', targetView: 'db-tools' },
+      { id: 'cmd-dep', title: 'Open Dependency Graph', subtitle: 'Interactive structural graph & Mermaid export', targetView: 'dependencies' },
+      { id: 'cmd-wf', title: 'Open Workflows', subtitle: 'Sequential API automation workflow builder', targetView: 'workflows' },
+      { id: 'cmd-cicd', title: 'Open CI/CD Generator', subtitle: 'GitHub Actions, GitLab CI, Jenkins & POSIX shell pipelines', targetView: 'cicd' },
+      { id: 'cmd-cli', title: 'Open CLI Configuration', subtitle: 'Headless api-studio CLI command builder & exit codes', targetView: 'cli' },
+      { id: 'cmd-ana', title: 'Open Analytics Dashboard', subtitle: 'Unified metrics dashboard & Report Center', targetView: 'analytics' },
     ];
     for (const v of views) {
       if (!q || v.title.toLowerCase().includes(q) || v.subtitle.toLowerCase().includes(q)) {
@@ -343,6 +363,16 @@ export const SearchDialog: React.FC = () => {
     if (item.targetView === 'contract-tests' || item.category === 'report') return <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />;
     if (item.targetView === 'mock-servers' || item.category === 'mock') return <Server className="w-4 h-4 text-amber-400 shrink-0" />;
     if (item.targetView === 'git') return <GitBranch className="w-4 h-4 text-orange-400 shrink-0" />;
+    if (item.targetView === 'performance') return <Activity className="w-4 h-4 text-cyan-400 shrink-0" />;
+    if (item.targetView === 'security-audit') return <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />;
+    if (item.targetView === 'monitors') return <HeartPulse className="w-4 h-4 text-emerald-400 shrink-0" />;
+    if (item.targetView === 'observability') return <Eye className="w-4 h-4 text-cyan-400 shrink-0" />;
+    if (item.targetView === 'db-tools') return <Database className="w-4 h-4 text-blue-400 shrink-0" />;
+    if (item.targetView === 'dependencies') return <GitFork className="w-4 h-4 text-cyan-400 shrink-0" />;
+    if (item.targetView === 'workflows') return <Workflow className="w-4 h-4 text-cyan-400 shrink-0" />;
+    if (item.targetView === 'cicd') return <GitCommitHorizontal className="w-4 h-4 text-blue-400 shrink-0" />;
+    if (item.targetView === 'cli') return <Terminal className="w-4 h-4 text-cyan-400 shrink-0" />;
+    if (item.targetView === 'analytics') return <BarChart2 className="w-4 h-4 text-blue-400 shrink-0" />;
     if (item.targetView === 'workspaces' || item.category === 'workspace') return <Building2 className="w-4 h-4 text-cyan-400 shrink-0" />;
     if (item.category === 'collection') return <Folder className="w-4 h-4 text-cyan-400 shrink-0" />;
     if (item.category === 'environment') return <Layers className="w-4 h-4 text-emerald-400 shrink-0" />;

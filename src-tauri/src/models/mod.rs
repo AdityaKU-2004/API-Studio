@@ -487,6 +487,38 @@ pub struct IndexedDbMigrationPayload {
     #[serde(default)]
     pub sync_metadata: Vec<serde_json::Value>,
     #[serde(default)]
+    pub performance_test_configs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub performance_test_runs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub performance_metrics: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub security_audit_configs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub security_findings: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub monitoring_configs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub monitoring_results: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub alert_configs: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub database_connection_profiles: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub query_history: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub environment_validation_results: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub dependency_graph_data: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub automation_workflows: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub workflow_executions: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub cli_configurations: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub analytics_snapshots: Vec<serde_json::Value>,
+    #[serde(default)]
     pub conflict_strategy: Option<String>, // "skip" | "overwrite"
 }
 
@@ -675,4 +707,245 @@ pub struct ZipArchiveValidationReport {
     pub total_entries: usize,
     pub total_uncompressed_bytes: u64,
     pub errors: Vec<String>,
+}
+
+// ===================== Phase 9 Performance, Monitoring, Security, DB & Workflow Models =====================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePerformanceTargetRequest {
+    pub id: String,
+    pub name: String,
+    pub method: String,
+    pub url: String,
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+    #[serde(default)]
+    pub body: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePerformanceRunConfig {
+    pub run_id: String,
+    pub mode: String, // smoke | load | stress | spike | soak
+    pub virtual_users: u32,
+    pub duration_seconds: u64,
+    #[serde(default)]
+    pub ramp_up_seconds: u64,
+    #[serde(default)]
+    pub ramp_down_seconds: u64,
+    #[serde(default)]
+    pub request_delay_ms: u64,
+    pub max_requests_per_second: u32,
+    pub timeout_ms: u64,
+    #[serde(default)]
+    pub verify_ssl: Option<bool>,
+    pub targets: Vec<NativePerformanceTargetRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePerformanceMetricSample {
+    pub id: String,
+    pub run_id: String,
+    pub timestamp: i64,
+    pub elapsed_seconds: f64,
+    pub active_virtual_users: u32,
+    pub current_rps: f64,
+    pub avg_response_time_ms: f64,
+    pub error_rate_percent: f64,
+    pub throughput_bytes_per_sec: f64,
+    pub status_codes: HashMap<String, usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePerformanceMetricsSummary {
+    pub total_requests: usize,
+    pub successful_requests: usize,
+    pub failed_requests: usize,
+    pub timeout_count: usize,
+    pub requests_per_second: f64,
+    pub avg_response_time_ms: f64,
+    pub min_response_time_ms: f64,
+    pub max_response_time_ms: f64,
+    pub median_response_time_ms: f64,
+    pub p90_response_time_ms: f64,
+    pub p95_response_time_ms: f64,
+    pub p99_response_time_ms: f64,
+    pub error_rate_percent: f64,
+    pub total_bytes_received: usize,
+    pub throughput_bytes_per_sec: f64,
+    pub status_code_distribution: HashMap<String, usize>,
+    pub sample_count: usize,
+    pub percentiles_approximate: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub percentile_note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativePerformanceRunResult {
+    pub run_id: String,
+    pub status: String,
+    pub started_at: i64,
+    pub completed_at: i64,
+    pub duration_ms: u64,
+    pub summary: NativePerformanceMetricsSummary,
+    pub samples: Vec<NativePerformanceMetricSample>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeSecurityHeaderAudit {
+    pub url: String,
+    pub final_url: String,
+    pub status_code: u16,
+    pub is_https: bool,
+    pub response_headers: HashMap<String, String>,
+    pub missing_headers: Vec<String>,
+    pub info_leak_warnings: Vec<String>,
+    pub certificate: Option<NativeCertificateInspectionResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeMonitorProbeInput {
+    pub id: String,
+    pub name: String,
+    pub protocol: String, // http | graphql | tcp | websocket | sse
+    pub endpoint: String,
+    pub method: String,
+    #[serde(default)]
+    pub headers: HashMap<String, String>,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default)]
+    pub expected_statuses: Vec<u16>,
+    #[serde(default)]
+    pub expected_content_substring: Option<String>,
+    pub timeout_ms: u64,
+    pub interval_seconds: u64,
+    pub degraded_latency_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeMonitorCheckResult {
+    pub id: String,
+    pub monitor_id: String,
+    pub timestamp: i64,
+    pub status: String, // healthy | degraded | unavailable | unknown
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status_code: Option<u16>,
+    pub response_time_ms: u64,
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDatabaseProfileInput {
+    pub id: String,
+    pub name: String,
+    pub engine: String, // sqlite | postgresql | mysql
+    #[serde(default)]
+    pub host: Option<String>,
+    #[serde(default)]
+    pub port: Option<u16>,
+    pub database_name: String,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub credential_ref: Option<String>,
+    #[serde(default)]
+    pub ssl_mode: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDatabaseColumnMeta {
+    pub name: String,
+    pub data_type: String,
+    pub nullable: bool,
+    pub is_primary_key: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDatabaseForeignKeyMeta {
+    pub column_name: String,
+    pub referenced_table: String,
+    pub referenced_column: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDatabaseIndexMeta {
+    pub name: String,
+    pub columns: Vec<String>,
+    pub unique: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDatabaseTableMeta {
+    pub schema_name: String,
+    pub table_name: String,
+    pub table_type: String,
+    pub columns: Vec<NativeDatabaseColumnMeta>,
+    pub indexes: Vec<NativeDatabaseIndexMeta>,
+    pub foreign_keys: Vec<NativeDatabaseForeignKeyMeta>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeDatabaseSchemaSnapshot {
+    pub database_name: String,
+    pub schemas: Vec<String>,
+    pub tables: Vec<NativeDatabaseTableMeta>,
+    pub inspected_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeSqlQueryRequest {
+    pub query_id: String,
+    pub profile: NativeDatabaseProfileInput,
+    pub sql: String,
+    pub read_only: bool,
+    pub confirm_destructive: bool,
+    pub max_rows: usize,
+    pub timeout_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeSqlQueryResult {
+    pub columns: Vec<String>,
+    pub rows: Vec<serde_json::Map<String, serde_json::Value>>,
+    pub row_count: usize,
+    pub truncated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub affected_rows: Option<u64>,
+    pub duration_ms: u64,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NativeCliExecutionSummary {
+    pub exit_code: i32,
+    pub status: String,
+    pub total: usize,
+    pub passed: usize,
+    pub failed: usize,
+    pub duration_ms: u64,
+    pub details: Vec<String>,
 }

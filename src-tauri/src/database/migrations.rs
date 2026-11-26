@@ -1,7 +1,7 @@
 use crate::models::AppError;
 use rusqlite::Connection;
 
-pub const LATEST_SCHEMA_VERSION: i64 = 2;
+pub const LATEST_SCHEMA_VERSION: i64 = 3;
 
 const MIGRATION_V1_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -353,6 +353,144 @@ CREATE TABLE IF NOT EXISTS sync_metadata (
 );
 "#;
 
+const MIGRATION_V3_SQL: &str = r#"
+CREATE TABLE IF NOT EXISTS performance_test_configs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    mode TEXT NOT NULL DEFAULT 'load',
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS performance_test_runs (
+    id TEXT PRIMARY KEY,
+    config_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    completed_at INTEGER,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_perf_runs_config ON performance_test_runs(config_id);
+CREATE INDEX IF NOT EXISTS idx_perf_runs_started ON performance_test_runs(started_at DESC);
+
+CREATE TABLE IF NOT EXISTS performance_metrics (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_perf_metrics_run ON performance_metrics(run_id, timestamp);
+
+CREATE TABLE IF NOT EXISTS security_audit_configs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS security_findings (
+    id TEXT PRIMARY KEY,
+    audit_id TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open',
+    detected_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sec_findings_audit ON security_findings(audit_id);
+CREATE INDEX IF NOT EXISTS idx_sec_findings_severity ON security_findings(severity);
+
+CREATE TABLE IF NOT EXISTS monitoring_configs (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    protocol TEXT NOT NULL DEFAULT 'http',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS monitoring_results (
+    id TEXT PRIMARY KEY,
+    monitor_id TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mon_results_monitor_ts ON monitoring_results(monitor_id, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS alert_configs (
+    id TEXT PRIMARY KEY,
+    monitor_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_alert_configs_monitor ON alert_configs(monitor_id);
+
+CREATE TABLE IF NOT EXISTS database_connection_profiles (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    engine TEXT NOT NULL,
+    credential_ref TEXT,
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS query_history (
+    id TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    executed_at INTEGER NOT NULL,
+    success INTEGER NOT NULL DEFAULT 1,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_query_history_profile_ts ON query_history(profile_id, executed_at DESC);
+
+CREATE TABLE IF NOT EXISTS environment_validation_results (
+    id TEXT PRIMARY KEY,
+    environment_id TEXT NOT NULL,
+    checked_at INTEGER NOT NULL,
+    valid INTEGER NOT NULL DEFAULT 1,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_env_validation_env ON environment_validation_results(environment_id);
+
+CREATE TABLE IF NOT EXISTS dependency_graph_data (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    generated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS automation_workflows (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS workflow_executions (
+    id TEXT PRIMARY KEY,
+    workflow_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_workflow_exec_wf ON workflow_executions(workflow_id, started_at DESC);
+
+CREATE TABLE IF NOT EXISTS cli_configurations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    subcommand TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS analytics_snapshots (
+    id TEXT PRIMARY KEY,
+    generated_at INTEGER NOT NULL,
+    payload_json TEXT NOT NULL
+);
+"#;
+
 pub fn run_migrations(conn: &mut Connection) -> Result<i64, AppError> {
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
 
@@ -395,6 +533,17 @@ pub fn run_migrations(conn: &mut Connection) -> Result<i64, AppError> {
         tx.execute(
             "INSERT OR REPLACE INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
             rusqlite::params![2i64, "v2_phase8_lifecycle_mock_git_collab_schema", now],
+        )?;
+        tx.commit()?;
+    }
+
+    if current_version < 3 {
+        let tx = conn.transaction()?;
+        tx.execute_batch(MIGRATION_V3_SQL)?;
+        let now = chrono::Utc::now().timestamp_millis();
+        tx.execute(
+            "INSERT OR REPLACE INTO schema_migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
+            rusqlite::params![3i64, "v3_phase9_devops_perf_security_monitoring_db_workflows", now],
         )?;
         tx.commit()?;
     }
@@ -456,6 +605,22 @@ mod tests {
             "collaboration_comments",
             "activity_logs",
             "sync_metadata",
+            "performance_test_configs",
+            "performance_test_runs",
+            "performance_metrics",
+            "security_audit_configs",
+            "security_findings",
+            "monitoring_configs",
+            "monitoring_results",
+            "alert_configs",
+            "database_connection_profiles",
+            "query_history",
+            "environment_validation_results",
+            "dependency_graph_data",
+            "automation_workflows",
+            "workflow_executions",
+            "cli_configurations",
+            "analytics_snapshots",
         ];
 
         for table in expected_tables {
