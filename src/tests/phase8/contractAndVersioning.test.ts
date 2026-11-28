@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import 'fake-indexeddb/auto';
 import {
   exportContractReportAsCsv,
   exportContractReportAsHtml,
@@ -10,6 +11,8 @@ import {
 import { compareApiSpecVersions } from '../../services/openapi/specDiffEngine';
 import { parseOpenApiDocument } from '../../services/openapi/openapiParser';
 import { createDefaultRequest } from '../../stores/requestStore';
+import { db } from '../../database/database';
+import { useSpecStore } from '../../stores/specStore';
 import { ApiResponse, ApiVersionEntry } from '../../types';
 
 const BASE_SPEC = `openapi: 3.0.3
@@ -264,5 +267,58 @@ describe('Phase 8: Contract Testing & API Spec Diff Engine', () => {
     expect(diff.disclaimer.toLowerCase()).toContain('rule-based');
     expect(diff.changes.some((c) => c.category === 'endpoint-removed' && c.severity === 'breaking')).toBe(true);
     expect(diff.changes.some((c) => c.category === 'endpoint-added' && c.severity === 'non-breaking')).toBe(true);
+  });
+
+  it('indexes createdAt on apiVersions and loads specs cleanly via useSpecStore', async () => {
+    await db.open();
+    await db.apiVersions.clear();
+    await db.apiSpecs.clear();
+
+    await db.apiSpecs.put({
+      id: 'spec-idx-test',
+      projectId: 'proj-default',
+      workspaceId: 'ws-default',
+      name: 'Indexed Billing API',
+      version: '2.0.0',
+      format: 'yaml',
+      sourceType: 'manual',
+      content: TARGET_SPEC,
+      activeVersionId: 'ver-idx-2',
+      createdAt: 100,
+      updatedAt: 200,
+    });
+
+    await db.apiVersions.bulkPut([
+      {
+        id: 'ver-idx-1',
+        specId: 'spec-idx-test',
+        versionLabel: '1.0.0',
+        content: BASE_SPEC,
+        format: 'yaml',
+        isActive: false,
+        isArchived: false,
+        createdAt: 100,
+        updatedAt: 100,
+      },
+      {
+        id: 'ver-idx-2',
+        specId: 'spec-idx-test',
+        versionLabel: '2.0.0',
+        content: TARGET_SPEC,
+        format: 'yaml',
+        isActive: true,
+        isArchived: false,
+        createdAt: 200,
+        updatedAt: 200,
+      },
+    ]);
+
+    const ordered = await db.apiVersions.orderBy('createdAt').reverse().toArray();
+    expect(ordered.map((v) => v.id)).toEqual(['ver-idx-2', 'ver-idx-1']);
+
+    await useSpecStore.getState().loadSpecs();
+    const state = useSpecStore.getState();
+    expect(state.isLoaded).toBe(true);
+    expect(state.versions.map((v) => v.id)).toEqual(['ver-idx-2', 'ver-idx-1']);
   });
 });

@@ -56,6 +56,7 @@ import {
   DB_SCHEMA_V3,
   DB_SCHEMA_V4,
   DB_SCHEMA_V5,
+  DB_SCHEMA_V6,
 } from './schema';
 
 // In Node.js / test environments, ensure indexedDB is available via fake-indexeddb
@@ -136,6 +137,7 @@ export class ApiStudioDatabase extends Dexie {
     this.version(3).stores(DB_SCHEMA_V3);
     this.version(4).stores(DB_SCHEMA_V4);
     this.version(5).stores(DB_SCHEMA_V5);
+    this.version(6).stores(DB_SCHEMA_V6);
   }
 }
 

@@ -1,5 +1,5 @@
 export const DATABASE_NAME = 'ApiStudioDB';
-export const CURRENT_DATABASE_VERSION = 5;
+export const CURRENT_DATABASE_VERSION = 6;
 
 export const DB_SCHEMA_V1 = {
   collections: 'id, name, order, createdAt, updatedAt',
@@ -66,4 +66,9 @@ export const DB_SCHEMA_V5 = {
   workflowExecutions: 'id, workflowId, status, startedAt, completedAt',
   cliConfigurations: 'id, name, subcommand, updatedAt',
   analyticsSnapshots: 'id, generatedAt',
+};
+
+export const DB_SCHEMA_V6 = {
+  ...DB_SCHEMA_V5,
+  apiVersions: 'id, specId, versionLabel, isActive, isArchived, createdAt, updatedAt',
 };
