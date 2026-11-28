@@ -29,14 +29,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Cache npm packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('package.json', 'package-lock.json', 'bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
+          cache: 'npm'
 
       - name: Set up Rust toolchain (x86_64-unknown-linux-gnu)
         uses: dtolnay/rust-toolchain@stable
@@ -66,12 +59,7 @@ jobs:
             patchelf
 
       - name: Install frontend dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install --no-audit --no-fund
-          fi
+        run: npm ci
 
       - name: Build React frontend
         run: npm run build
