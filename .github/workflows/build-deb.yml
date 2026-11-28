@@ -1,0 +1,172 @@
+name: Build Linux Debian Package (.deb)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-deb:
+    name: Build & Validate Debian (.deb) [x86_64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package.json', 'package-lock.json', 'bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Set up Rust toolchain (x86_64-unknown-linux-gnu)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Cargo dependencies and build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux Tauri 2 build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            wget \
+            file \
+            pkg-config \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Build React frontend
+        run: npm run build
+
+      - name: Run TypeScript validation
+        run: npm run lint
+
+      - name: Run Rust checks
+        working-directory: src-tauri
+        run: cargo check --all-targets --target x86_64-unknown-linux-gnu
+
+      - name: Build Tauri application (.deb)
+        run: npm run tauri:build:linux -- --bundles deb
+
+      - name: Locate and validate generated Debian package
+        id: deb
+        run: |
+          set -euo pipefail
+          DEB_PATH=$(find src-tauri/target -type f -path "*/release/bundle/deb/*.deb" | sort | head -n 1)
+          if [ -z "$DEB_PATH" ] || [ ! -s "$DEB_PATH" ]; then
+            echo "::error::No Debian (.deb) package was generated under src-tauri/target/**/release/bundle/deb/"
+            exit 1
+          fi
+
+          echo "Located Debian package: $DEB_PATH"
+          dpkg-deb --info "$DEB_PATH"
+          dpkg-deb --contents "$DEB_PATH"
+
+          PKG_NAME=$(dpkg-deb -f "$DEB_PATH" Package)
+          PKG_VERSION=$(dpkg-deb -f "$DEB_PATH" Version)
+          PKG_ARCH=$(dpkg-deb -f "$DEB_PATH" Architecture)
+          ENTRY_COUNT=$(dpkg-deb --contents "$DEB_PATH" | wc -l)
+
+          if [ -z "$PKG_NAME" ] || [ -z "$PKG_VERSION" ]; then
+            echo "::error::Debian package metadata is missing Package or Version fields."
+            exit 1
+          fi
+
+          if [ "$PKG_ARCH" != "amd64" ]; then
+            echo "::error::Expected amd64 architecture package, found '$PKG_ARCH'."
+            exit 1
+          fi
+
+          if [ "$ENTRY_COUNT" -lt 2 ]; then
+            echo "::error::Generated .deb archive appears empty ($ENTRY_COUNT entries)."
+            exit 1
+          fi
+
+          echo "deb_path=$DEB_PATH" >> "$GITHUB_OUTPUT"
+          echo "deb_filename=$(basename "$DEB_PATH")" >> "$GITHUB_OUTPUT"
+          echo "Validated $PKG_NAME v$PKG_VERSION ($PKG_ARCH) with $ENTRY_COUNT entries."
+
+      - name: Upload Debian (.deb) artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-studio-linux-deb
+          path: ${{ steps.deb.outputs.deb_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release (.deb)
+    needs: build-deb
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Debian (.deb) artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-studio-linux-deb
+          path: release-assets
+
+      - name: Verify release asset exists
+        id: asset
+        run: |
+          set -euo pipefail
+          DEB_FILE=$(find release-assets -type f -name "*.deb" | sort | head -n 1)
+          if [ -z "$DEB_FILE" ] || [ ! -s "$DEB_FILE" ]; then
+            echo "::error::Debian (.deb) installer missing from downloaded build artifact."
+            exit 1
+          fi
+          echo "deb_file=$DEB_FILE" >> "$GITHUB_OUTPUT"
+          echo "Prepared release asset: $DEB_FILE"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: API Studio ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: ${{ steps.asset.outputs.deb_file }}

@@ -29,13 +29,22 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb"],
+    "category": "DeveloperTool",
+    "shortDescription": "A modern API development and testing desktop application.",
+    "longDescription": "API Studio is a modern API development and testing desktop application featuring HTTP, GraphQL, WebSocket, and SSE clients, collections, environments, scripting, contract testing, mocking, monitoring, and analytics.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico",
       "icons/icon.png"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "section": "devel",
+        "priority": "optional"
+      }
+    }
   }
 }
